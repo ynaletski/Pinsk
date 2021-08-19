@@ -1,0 +1,20 @@
+>
+ Serial number 14094108
+ Sensor description: CMF200+         
+ Tramsmitter description: CONFIGURE XMTR  
+ Message: 20-OCT-2009                     
+ Transmitter software revision : 27
+ Flow calibration: 212.664.45      
+ Temp.calibration: 1.00000T.00000
+ D1 F155: 0.000
+ D2 F157: 1.000
+ K1 F159: 10653.910
+ K2 F161: 12668.940
+ Mass flow meter factor    F279: 1.000000
+ Volume flow meter factor  F281: 1.001500
+ Density flow meter factor F283: 0.998500
+ Cutoff for mass flow   F195: 59999.996094
+ Cutoff for volume flow F197: 14.999999
+ Cutoff for density     F149: 5.000000
+>
+>CTRL 1 60000 0 15 0 35

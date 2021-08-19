@@ -1,0 +1,22 @@
+>N8
+>
+>MVP
+>
+ Serial number 14304376
+ Sensor description: F/H300          
+ Tramsmitter description: 20120724        
+ Message: 20120724                        
+ Transmitter software revision : 31
+ Flow calibration: 8044.64.52      
+ Temp.calibration: 1.00000T.00000
+ D1 F155: 0.000
+ D2 F157: 1.000
+ K1 F159: 2122.592
+ K2 F161: 2540.713
+ Mass flow meter factor    F279: 1.000000
+ Volume flow meter factor  F281: 1.005000
+ Density flow meter factor F283: 0.995000
+ Cutoff for mass flow   F195: 1999.999878
+ Cutoff for volume flow F197: 3.000000
+ Cutoff for density     F149: 200.000000
+>

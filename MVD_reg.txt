@@ -1,0 +1,14 @@
+
+
+0279 0280  Mass flow rate meter factor
+0281 0282  Volume flow rate meter factor
+0283 0284  Density meter factor 
+
+
+0285 0286  Raw tube frequency (Hz)
+0287 0288  Left pickoff voltage (millivolts)
+0289 0290  Right pickoff voltage (millivolts)
+0291 0292  Drive gain (% for MVD Direct Connect, Series 1000, Series 2000,
+             Series 3000; volts for RFT9739)
+
+0293 0294  Mass flow live zero flow 

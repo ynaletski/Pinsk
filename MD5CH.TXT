@@ -1,0 +1,58 @@
+
+09 Sep 2011
+
+Добавлено вычисление  Message-Digest5
+для 2-го файла в корневом сегменте I7188XA
+
+добавлены файлы md5c.c, md5.h
+добавлено в host.c
+
+//---------------------------------
+      if (!strcmp(intrpr.wrd,"MD5" ))
+        {   //'MD5'
+          f_md5(0);
+          goto fin;
+        }
+//---------------------------------
+
+добавлено в dos_win.c
+
+long int tm_md=0;
+...
+       else if(key== '1') // 8 Версия sw
+       {
+
+         SetDisplayPage(EmptPage);
+         f_clr_scr_MMI();
+
+      MmiGotoxy(0,0);   MmiPrintf("   VER %s",sw_ver);
+      MmiGotoxy(0,2);   MmiPrintf("   MD5 counting ...");
+      MmiGotoxy(0,6);   MmiPuts(" ESC   - возврат в меню");
+         tm_md=TimeStamp;
+         sw_mmi=271;
+         break;
+       }
+...
+
+    case 271:/* ожидание нажатия ESC,Enter */
+         if((key==ESC)||(key==ENTER)  )
+         {
+           goto m0_f1;
+         }
+         if( (f_timer(tm_md,(long int)1000 )) | fl_md_fst )
+         {
+           f_md5(1);
+           sw_mmi=272;
+         }
+         break;
+ /*========================================*/
+    case 272:
+
+       if((key==ESC)||(key==ENTER))  /* переход на начальную страницу */
+       {
+           goto m0_f1;
+       }
+       break;
+ /*========================================*/
+-----------------------------------
+

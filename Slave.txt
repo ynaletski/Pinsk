@@ -1,0 +1,1668 @@
+
+//----------------------------------
+// данные принимаемые сверху
+int    CMD_IN   = 0;
+int    CMD_OUT_p = 0;
+
+#if defined(BIO_1)
+int OUT_or=0;
+int OUT_Pmp=0;
+float T_Pmp_delay=0;
+#endif
+int reg_cmn=0;
+
+float n_id_af=0;
+
+void (*ff_Slv)() = NULL;
+
+int flag_Slv=0;
+int flag_ZT=0; // признак успешного обнуления Total
+
+int ComPortSlv = 4;
+float dose_dlvr_sl=0;
+
+int AddrSlv=1;
+int cod_float=1;
+int State_SLV=0;
+int Last_evt=0;
+int sw_mmi_slv=0;
+int sw_dlv_slv=0;
+
+int  WD_PMP_flag=0;
+int  WD_PMP_Fl=0;
+#define WD_PMP_P1 (2000)
+long int WD_PMP_time=0;
+long int WD_PMP_t1=0;
+long int WD_PMP_Per=20000; // величина таймаута по приему сообщения
+
+int Slv_fict=0;
+int Slv_fict1=0;
+int Slv_fict2=0;
+int Slv_fict3=0;
+int Slv_fict4=0;
+
+int flag_slvrtu=0;
+int fl_slv_out=0;
+
+long int byte_timout_slv= 8 ;
+long int out_delay_slv = 5 ;
+
+void *list_Slv_int[]={
+
+&n_sl_int1,      // 0 колич.перем int
+&n_sl_flt1,      // 1 колич.перем float
+
+&INP_OFP,        // 2  Состояние контроллера переполнения
+&ICP_error[7],   // 3  регистр ошибок драйвера OFP
+
+&sw_ver[0],      // 4  Версия ПО, 6 ASCII символов
+&sw_ver[2],      // 5
+&sw_ver[4],      // 6
+
+&CMD_IN ,   // &Slv_int[6],     // 7   CMD_REG регистр команды
+
+&State_SLV,      // 8   Состояние отпуска
+&Last_evt,       // 9   Последнее событие записанное в журнал
+&Reg_err,        // 10    &FL_err,         // 10  Флаг ошибки, 0 - OK
+
+&ICP_error[9],   // 11  Код ошибки функционирования
+&ICP_error[10],  // 12  расширенный регистр ошибки
+&ICP_error[1],   // 13  регистр ошибок драйвера MVD
+&ICP_error[2],   // 14  регистр ошибок драйвера 7060
+&ICP_error[4],   // 15  регистр ошибок драйвера 7017
+&ICP_error[6],   // 16  регистр ошибок драйвера DELTA
+&WD_PMP_Per,     // 17  Период сторожевого таймера Host,ms
+                 //     0 - таймер отключен
+&mode_hst,       // 18  1 - запрет ввода дозы из ВРФ
+--&Slv_int[10],    // 19  подтверждение старта без кнопки = Strt_cmd(0x55)
+--&Slv_int[11],    // 20
+&reg_cmn,           // 19 =62  Сводный регистр состояния
+&sw_mmi_slv,        // 20 =63  ключ MMI
+
+&INP_VARi0,       // 21 регистр дискр.входов с учетом инверсии
+&OUT_VAR,         // 22 регистр дискр.выходов
+
+&DriveState[0],    // 23 регистр Состояния DELTA
+&DriveError[0],    // 24 регистр ошибок  DELTA
+&DriveCurrent[0],  //&Delta_current[0],  // 25 ток в моторе
+
+&DriveSV[0],       // 26 тек.знач. частоты  привода
+&DriveSA[0],       // 27 тек.знач. времени разгона
+&DriveSD[0],       // 28 тек.знач. времени замедления
+
+&Drive_SV_beg[0],   // 29 нач.знач. частоты привода
+&Drive_SA_beg[0],   // 30 нач.знач. времени разгона
+&Drive_SD_beg[0],   // 31 нач.знач. времени замедления
+
+
+#if defined(BIO_1)
+&OUT_or,            // 32 управление клапанами и насосом по MODBUS
+&OUT_Pmp,           // 33 управление насосом
+#else
+&Slv_int[2],        // 32 фиктивная переменная
+&Slv_int[2],        // 33 фиктивная переменная
+#endif
+
+&Slv_int[2],        // 34 фиктивная переменная
+
+&s_MVD[0].reg_err,  // 35 регистр ошибки MVD
+&type_liq,          // 36  1 Crude Oils
+                    //     2 Fuel Oils   - диэтопливо
+                    //     3 Jet group
+                    //     4 Kerosene
+                    //     5 Gazolines   - бензин
+                    //     6 Lubricating Oils
+//&mode_r,            // 37 режим управл.давлением
+&result_dlv,        // 37 результат завершения отпуска
+
+&Flag_Low  ,        // 38  1 - нижний налив
+&Flag_mass ,        // 39  1 - отпуск по массе
+&flag_prok ,        // 40  1 - прокачка
+&mode_temp ,        // 41  1 - внешний термометр для D_ref, 0 - MVD
+&mode_refD ,        // 42  1 - усреднение в процессе приема D_ref
+
+
+&str_prod[0],       // 43  Строка с названием продукта
+&str_prod[2],       // 44
+&str_prod[4],       // 45
+&str_prod[6],       // 46
+&str_prod[8],       // 47
+&str_prod[10],      // 48
+&str_prod[12],      // 49
+&str_prod[14],      // 50
+&str_prod[16],      // 51
+&str_prod[18],      // 52
+
+
+&type_dlv ,         // 53  тип налива 1 - верхний, 2 - нижний
+&sect_num ,         // 54  номер секции - отображение
+&sect_mass,         // 55  Масса отпуска, кг  - отображение
+&sect_vol ,         // 56  Объем отпуска,л - отображение
+&sect_rslt,         // 57  Состояние диалога
+                    //   0  - диалог не завершен
+                    //   1  - диалог завершен
+                    //  -1  - диалог прекращен по 'ESC'
+                    //
+                    //
+&en_bot[4],         // 58  Start_High
+&en_bot[12],        // 59  Start_Low
+&en_bot[ 6],        // 60  Консоль
+&en_bot[ 7],        // 61  Трап
+
+&reg_cmn,           // 62  Сводный регистр состояния
+&sw_mmi_slv,        // 63  ключ MMI
+
+&str_dsp1[0],       // 64  Строка 1
+&str_dsp1[2],       // 65
+&str_dsp1[4],       // 66
+&str_dsp1[6],       // 67
+&str_dsp1[8],       // 68
+&str_dsp1[10],      // 69
+&str_dsp1[12],      // 70
+&str_dsp1[14],      // 71
+&str_dsp1[16],      // 72
+&str_dsp1[18],      // 73
+&str_dsp1[20],      // 74
+&str_dsp1[22],      // 75
+&str_dsp1[24],      // 76
+&str_dsp1[26],      // 77
+&str_dsp1[28],      // 78
+
+&str_dsp2[0],       // 79  Строка 2
+&str_dsp2[2],       //
+&str_dsp2[4],       //
+&str_dsp2[6],       //
+&str_dsp2[8],       //
+&str_dsp2[10],      //
+&str_dsp2[12],      //
+&str_dsp2[14],      //
+&str_dsp2[16],      //
+&str_dsp2[18],      //
+&str_dsp2[20],      //
+&str_dsp2[22],      //
+&str_dsp2[24],      //
+&str_dsp2[26],      //
+&str_dsp2[28],      //
+
+&str_dsp3[0],       // 94  Строка 3
+&str_dsp3[2],       //
+&str_dsp3[4],       //
+&str_dsp3[6],       //
+&str_dsp3[8],       //
+&str_dsp3[10],      //
+&str_dsp3[12],      //
+&str_dsp3[14],      //
+&str_dsp3[16],      //
+&str_dsp3[18],      //
+&str_dsp3[20],      //
+&str_dsp3[22],      //
+&str_dsp3[24],      //
+&str_dsp3[26],      //
+&str_dsp3[28],      //
+
+&str_dsp4[0],       // 109 Строка 4
+&str_dsp4[2],       //
+&str_dsp4[4],       //
+&str_dsp4[6],       //
+&str_dsp4[8],       //
+&str_dsp4[10],      //
+&str_dsp4[12],      //
+&str_dsp4[14],      //
+&str_dsp4[16],      //
+&str_dsp4[18],      //
+&str_dsp4[20],      //
+&str_dsp4[22],      //
+&str_dsp4[24],      //
+&str_dsp4[26],      //
+&str_dsp4[28],      //
+
+&str_dsp5[0],       // 124 Строка 5
+&str_dsp5[2],       //
+&str_dsp5[4],       //
+&str_dsp5[6],       //
+&str_dsp5[8],       //
+&str_dsp5[10],      //
+&str_dsp5[12],      //
+&str_dsp5[14],      //
+&str_dsp5[16],      //
+&str_dsp5[18],      //
+&str_dsp5[20],      //
+&str_dsp5[22],      //
+&str_dsp5[24],      //
+&str_dsp5[26],      //
+&str_dsp5[28],      //
+
+&str_dsp6[0],       // 139 Строка 6
+&str_dsp6[2],       //
+&str_dsp6[4],       //
+&str_dsp6[6],       //
+&str_dsp6[8],       //
+&str_dsp6[10],      //
+&str_dsp6[12],      //
+&str_dsp6[14],      //
+&str_dsp6[16],      //
+&str_dsp6[18],      //
+&str_dsp6[20],      //
+&str_dsp6[22],      //
+&str_dsp6[24],      //
+&str_dsp6[26],      //
+&str_dsp6[28],      //
+
+
+&str_dsp7[0],       // 154 Строка 7
+&str_dsp7[2],       //
+&str_dsp7[4],       //
+&str_dsp7[6],       //
+&str_dsp7[8],       //
+&str_dsp7[10],      //
+&str_dsp7[12],      //
+&str_dsp7[14],      //
+&str_dsp7[16],      //
+&str_dsp7[18],      //
+&str_dsp7[20],      //
+&str_dsp7[22],      //
+&str_dsp7[24],      //
+&str_dsp7[26],      //
+&str_dsp7[28],      //
+
+NULL                //
+
+};
+
+int n_sl_int=(sizeof(list_Slv_int) / sizeof(list_Slv_int[0])) - 1 ;
+int n_sl_int1=(sizeof(list_Slv_int) / sizeof(list_Slv_int[0])) - 1 ;
+
+float *list_Slv_flt[]={
+&Slv_float[0],      // 0 F1000 операнд команды
+&Slv_float[1],      // 1 F1002 копия операнда
+              // резервные переменные
+&Vol_beg,           // 2 F1004  объем цистерны до уровня погружения рукава,л
+&P_min_valve,       // 3 F1006 минимальное давление  МПа, при котором возможно увеличить степень
+                    //    открытия вентиля
+&T_Ref,             // 4 F1008  Референсная температура,C (15)
+&D_ref,             // 5 F1010  Плотность приведенная к референсной температуре
+&V_ref,             // 6 F1012  Объем отпуска приведенный к референсной температуре
+&Temp_a,            // 7 F1014  Температура отпущенного нефтепродукта
+&Dens_a,            // 8 F1016 Плотность отпущенного нефтепродукта
+&dose_dlvr_sl,      // 9 F1018
+              // Данные из расходомера
+&s_MVD[0].MassI,    // 10 F1020  Масса инвентарная ( накапливающий счетчик) Mass inventory ,I263
+&s_MVD[0].MassT,    // 11 F1022 Масса в текущей операции отпуска (total)   Mass total     ,I259
+&s_MVD[0].FlowM,    // 12 F1024  Массовый расход, кг/ч                      Mass flow      ,I247
+&s_MVD[0].Dens,     // 13 F1026 Плотность кг/м3                            Density        ,I249
+&s_MVD[0].Temp,     // 14 F1028 Температура,                               Temperature    ,I251
+&s_MVD[0].VolI,     // 15 F1030 Объем инвентарный ( накапливающий счетчик) Volume invntory,I265
+
+&s_MVD[0].VolT,     // 16 F1032 Объем в текущей операции отпуска (total)
+&s_MVD[0].FlowV,    // 17 F1034 Объемный расход, л/ч
+//&s_MVD[0].PressG,   // 18 F1036
+&n_id_af,            //18 F1036 = F1070 код доступа автомобиля
+
+                    // Данные аналоговых датчиков
+&s_MVD[0].TempR,    // 19 F1038  температура по внешнему датчику
+&s_MVD[0].Press,    // 20 F1040  давление по внешнему датчику
+
+&P_dem,             // 21 F1042 Заданное давление  10000 = 1 МПа
+&LIM_P,             // 22 F1044 частота насоса max,12800 = 1 Гц
+&LIM_M,             // 23 F1046 частота насоса min,12800 = 1 Гц
+                           // Верхний налив
+&Flow_beg,          // 24 F1048 Расход начальный, л/с
+&Flow_nom,          // 25 F1050 Расход номинальный, л/с
+&Flow_min,          // 26 F1052 Расход замедления  , л/с
+&Flow_min1,         // 27 F1054 Расход замедления 1, л/с
+&Flow_min2,         // 28 F1056 Расход замедления 2, л/с
+&Com_Baud_Slave,    // 29 F1058 Частота обмена по Modbus
+
+                           // Нижний налив
+&Flow_nomL,          // 30 F1060 Расход номинальный, л/с
+&Flow_minL,          // 31 F1062 Расход замедления , л/с
+&Flow_min1L,         // 32 F1064 Расход замедления 1, л/с
+&Flow_min2L,         // 33 F1066 Расход замедления 2, л/с
+
+&Dens_cmn_f,         // 34 F1068 Текущее значение плотности при 15 С, кг/м3
+
+#if defined(BIO_1)
+&T_Pmp_delay,        // 36 F1070 Задержка выключения насоса после окончания отпуска
+#else
+&n_id_af,            // 36 F1070 код доступа автомобиля
+#endif
+
+NULL
+
+};
+float Com_Baud_Slave=9600;
+long int *list_Slv_lng[]={
+                    // Addr = 1058
+//&Com_Baud_Slave,    //  29  Частота обмена по Modbus
+
+NULL
+};
+
+int n_sl_lng=(sizeof(list_Slv_lng) / sizeof(&FL_err)) - 1 ;
+int n_sl_lng1=(sizeof(list_Slv_lng) / sizeof(&FL_err)) - 1 ;
+
+int n_sl_flt=((sizeof(list_Slv_flt) / sizeof(&FL_err)) - 1)+ ((sizeof(list_Slv_lng) / sizeof(&FL_err)) - 1) ;
+//int n_sl_flt1=((sizeof(list_Slv_flt) / sizeof(&FL_err)) - 1)+ ((sizeof(list_Slv_lng) / sizeof(&FL_err)) - 1) ;
+int n_sl_flt1=((sizeof(list_Slv_flt) / sizeof(&FL_err)) - 1);
+int n_sl_flt0=(sizeof(list_Slv_flt) / sizeof(&FL_err)) - 1 ;
+
+int Slv_int[20]={
+  0,0,0,0,0,
+  0,0,0,0,0,
+};
+
+//--------------------------------
+float Slv_float[20]={
+0,
+0,
+2,
+3,
+4,
+5,
+};
+//--------------------------------
+long int Slv_lng[10]={
+  0,1,2,3,4,
+  5,6,7,8,9,
+};
+
+struct eee_dat S1D;  //T_INT T_INT_L T_FLOAT
+
+// Addr2Slot1 2000
+//  данные, читаемые верхним контроллером
+
+struct eee_dat Slv2_Slot1[]=
+{
+&CMD_IN             , T_INT   ,  //1   I7     CMD_OUT_p
+&State_SLV          , T_INT   ,  //1   I8
+&Reg_err            , T_INT   ,  //1   I10
+&INP_VARi0          , T_INT   ,  //1   I21
+&OUT_VAR            , T_INT   ,  //1   I22
+&s_MVD[0].MassI     , T_FLOAT ,  //2  F1020     Масса инвентарная ( накапливающий счетчик)
+&s_MVD[0].MassT     , T_FLOAT ,  //2  F1022     Масса в текущей операции отпуска (total)
+//&s_MVD[0].FlowM     , T_FLOAT ,  //2  F1024     Массовый расход, кг/ч
+&s_MVD[0].FlowV     , T_FLOAT ,  //2            Оъемный расход, м3/ч
+&s_MVD[0].Dens      , T_FLOAT ,  //2  F1026     Плотность кг/м3
+&s_MVD[0].Temp      , T_FLOAT ,  //2  F1028     Температура,C
+&s_MVD[0].VolI      , T_FLOAT ,  //2  F1030     Объем инвентарный ( накапливающий счетчик)
+&s_MVD[0].VolT      , T_FLOAT ,  //2  F1032     Объем в текущей операции отпуска (total)
+&Temp_a             , T_FLOAT ,  //2  F1014     Температура отпущенного нефтепродукта
+&Dens_a             , T_FLOAT ,  //2  F1016     Плотность отпущенного нефтепродукта
+&T_Ref              , T_FLOAT ,  //2  F1008     Референсная температура,C (15)
+&D_ref              , T_FLOAT ,  //2  F1010     Плотность приведенная к референсной температуре
+&V_ref              , T_FLOAT ,  //2  F1012     Объем отпуска приведенный к референсной температуре
+&type_liq           , T_INT   ,  //1  I36       тип нефтепродукта  1 - товарная нефть, 2 - диэтопливо, 5 - бензин
+};
+
+int Slv2_slt1_lgth= 30 ;
+int Slv2_slt1_max=sizeof(Slv2_Slot1) / sizeof(S1D) ;
+
+//---------------------------------------
+//---------------------------------------
+// Addr2Slot2   3000
+// данные, записываемые верхним контроллером
+
+struct eee_dat Slv2_Slot2[]=
+{
+&CMD_IN        , T_INT   ,       // 1   I7     регистр команды
+&Slv_float[0]  , T_FLOAT ,       // 2   F1000  операнд команды
+&Flow_nom      , T_FLOAT ,       // 2   F1050  Расход номинальный, л/с
+&Vol_beg       , T_FLOAT ,       // 2   F1004  объем цистерны до уровня погружения рукава,л
+&Flow_beg      , T_FLOAT         // 2   F1048  Расход начальный, л/с
+};
+int Slv2_slt2_lgth= 9 ;
+int Slv2_slt2_max=sizeof(Slv2_Slot2) / sizeof(S1D) ;
+//---------------------------------------
+//---------------------------------------
+
+unsigned long ComBaudSlv =9600L;
+int Com_lgthSlv  =8;
+int Com_paritySlv=0;// None  //0-(None);1-(Even);2-(Odd);3-(MARK, always 1); 4-(SPACE,always 0)
+int Com_stopSlv  =1;
+struct stor_buf *bf_Slv;
+int uk_beg_Slv=0;
+int uk_fin_Slv=0;
+
+  unsigned char buf_tmpSR[n_buf_RTU_s];
+// ==================================================
+// ==================================================
+
+/*
+void f_send_slv1()
+{
+
+        if(fl_slv_out != 0)
+         {
+          if( f_timer(time_snd[ComPortSlv],out_delay_slv))
+           {
+            ToComBufn(ComPortSlv,buf_tmpSR,fl_slv_out);
+            flag_slvrtu=0;
+            fl_slv_out=0;
+           }
+         }
+
+}
+*/
+// ==================================================
+int nn_comb=0;
+void fun_tim_u(void)
+{
+     if(flag_Slv != 0 )
+     {
+        if((flag_slvrtu == 0) && (fl_slv_out==0))
+        {
+         if(ffgets_SlvRTU(ComPortSlv))
+         {
+           flag_slvrtu = 1;
+
+          _fmemcpy(intrpr.bfcom,&cb_COM[ComPortSlv][0],(long int)(n_bcom[ComPortSlv]-2) );
+          nn_comb=n_bcom[ComPortSlv];
+          n_bcom[ComPortSlv]=0;
+
+         }
+        }
+
+//      f_send_slv1() ;
+/*
+        if(fl_slv_out != 0)
+         {
+          if( f_timer(time_snd[ComPortSlv],out_delay_slv))
+           {
+            ToComBufn(ComPortSlv,buf_tmpSR,fl_slv_out);
+            flag_slvrtu=0;
+            fl_slv_out=0;
+//          n_bcom[ComPortSlv]=0;
+           }
+         }
+*/
+
+     }
+}
+
+// ==================================================
+
+/*
+
+void f_send_slv()
+{
+        if(fl_slv_out != 0)
+         {
+          if( f_timer(time_snd[ComPortSlv],out_delay_slv))
+           {
+            ToComBufn(ComPortSlv,buf_tmpSR,fl_slv_out);
+            flag_slvrtu=0;
+            fl_slv_out=0;
+           }
+         }
+}
+
+*/
+
+// ==================================================
+
+void f_SlaveRTU()
+{
+int itmp;
+//  int  hour,min,sec;
+// вводит команду из Host (PC) и интерпретирует ее по протоколу Modbus RTU
+
+         if((flag_slvrtu != 0) && (fl_slv_out==0))
+         {
+//          f_stor_Slv(M_RD,cb_COM[ComPortSlv],n_bcom[ComPortSlv]);
+            f_intr_SlvRTU();
+            flag_slvrtu=0;
+         }
+}
+/*-------------------------------------------*/
+void f_get_SlvBuf()
+{
+  unsigned long int count=0xffff;
+
+    if( ( bf_Slv = (struct stor_buf *)malloc( (size_t)count )) == NULL )
+    {
+      printf("\n\r!Slave buffer is not allocated.\n\r");
+      RestoreCom(1);
+      RestoreCom(2);
+      RestoreCom(3);
+      while(!IsCom4OutBufEmpty()) ;  /* Wait all message sent out of COM4 */
+      RestoreCom(4);
+      exit (0);
+    }
+}
+/*-------------------------------------------*/
+void f_free_SlvBuf()
+{
+  free( bf_Slv );
+}
+/*-------------------------------------------*/
+void f_stor_Slv( char type,char *buf,int buf_n)
+{
+  long int nn;
+
+ bf_Slv[uk_fin_Slv].time = TimeStamp;
+
+ if(buf_n >= mess_lgth ) nn=mess_lgth;
+ else nn=buf_n;
+
+ bf_Slv[uk_fin_Slv].type_n=type | (char)nn;
+
+ _fmemcpy(bf_Slv[uk_fin_Slv].messg,buf,nn );
+ uk_fin_Slv=(uk_fin_Slv+1)&Slv_b_lgth_1;
+}
+/*-------------------------------------------*/
+#define RTU_min 6
+#define n_max_fn 5
+#define NN_fict 1000
+// количество байт в команде Host
+
+/* =============
+// функция ,  длина с контр.сумм.
+  1,8, // чтение Coil
+  3,8, // чтение Int
+  5,8, // запись Coil
+  6,8, // запись Int
+  16,NN_fict, // запись нескольких значений
+=============== */
+
+int n_max_rcv=NN_fict;
+int flag_wd_err=0;
+int ffgets_SlvRTU(int ComPort)
+{
+
+//  Функция принимает символы из порта COM ComPort  в буфер cb_COM[ComPort].
+//  При таймауте команда считается введенной и функция возвращает
+// значение 1.
+//
+
+/* ComPort - номер COM   1...4 */
+ char tmp;
+ int tmp1;
+ int i;
+m1:
+     if(IsCom(ComPort)==0)
+     {
+         if( WD_PMP_Per !=0 )
+           if( f_timer(WD_PMP_time,WD_PMP_Per ))
+           { // нет успешного приема
+
+            if(WD_PMP_flag != 0)
+            {
+              WD_PMP_flag=0;
+            //  f_icp_errS(WD_host);
+                          flag_wd_err=1;
+            }
+            WD_PMP_time=TimeStamp;
+           }
+
+           if( f_timer(WD_PMP_t1,WD_PMP_P1 ))
+           { // нет успешного приема
+            WD_PMP_Fl=0;
+            WD_PMP_t1=TimeStamp;
+           }
+
+        if( n_bcom[ComPort] != 0)
+         if( f_timer(time_snd[ComPort],byte_timout_slv))
+         { // истек таймаут приема ответа на команду
+m_end:
+            if((n_bcom[ComPort] >= RTU_min)&& (cb_COM[ComPort][0]==AddrSlv))
+            {
+              if(f_check_crc_RTU(cb_COM[ComPort],n_bcom[ComPort])==0)
+               {
+                  goto m_err;
+               }
+              n_max_rcv= NN_fict;
+
+   //       WD_PMP_flag=1;
+              WD_PMP_time=TimeStamp;
+              WD_PMP_t1=TimeStamp;
+              WD_PMP_Fl=1;
+       /*
+              if(ICP_error[icp_lst_max] & WD_host)
+              {
+               ICP_error[icp_lst_max] &= ~(unsigned int)WD_host;
+               ICP_error_c[icp_lst_max]=ICP_error[icp_lst_max];
+               for(i=0,tmp1=0;i<=icp_lst_max;i++)
+               {
+                 tmp1 |=ICP_error[i];
+               }
+//              printf("\r\n tmp1= %04x",tmp1);
+
+               if(tmp1==0)
+               {
+                FL_err=0;
+                if(sw_mmi==0) f_prn_begin();
+               }
+              }
+       */
+              return 1;
+            }
+            else
+             {
+m_err:
+               n_bcom[ComPort]=0;
+               n_max_rcv= NN_fict;
+               return 0;
+             }
+         }
+         return 0;
+     }
+     tmp=ReadCom(ComPort);
+     time_snd[ComPort]= TimeStamp;
+
+  #if(Slv_deb_rtu != 0)
+   if(flag_prn != 0) // qqqqq
+     {
+        tmp1=TimeStamp & 0x3ff;
+        printf("%04d:%02X ",tmp1, (int)tmp & 0xff);
+
+     }
+  #endif
+
+//     ToutAns[ComPort]=byte_timout_rtu[ComPort];
+
+     cb_COM[ComPort][n_bcom[ComPort]]=tmp;
+     if( (++n_bcom[ComPort]) >= n_bufcom )
+      {
+        n_bcom[ComPort]--;
+  /*
+        printf("\n Command buffer overflow !\n--");
+        puts(cb_COM1);
+  */
+      }
+
+      if(n_bcom[ComPort] == 2)
+         n_max_rcv=f_get_numRTU2(ComPort);
+      else if ((n_bcom[ComPort] == 7) && (n_max_rcv == NN_fict)  )
+         n_max_rcv=f_get_numRTU7(ComPort);
+
+      if(n_bcom[ComPort]>= n_max_rcv) goto m_end;
+
+      goto m1;
+}
+/*-------------------------------------------*/
+int f_get_numRTU2(int ComPort)
+{// по содержимому cb_COM[ComPort][] с количеством байт n_bcom[ComPort]
+ // вычисляет длину посылки RTU. Если длина не определена - возвращает NN_fict
+ int i_ret;
+ switch ((int) cb_COM[ComPort][1])
+ {
+  case 1:
+  case 3:
+  case 5:
+  case 6:
+         i_ret=8;
+         break;
+
+  default: i_ret=NN_fict;
+ }
+ return i_ret;
+}
+/*-------------------------------------------*/
+int f_get_numRTU7(int ComPort)
+{// по содержимому cb_COM[ComPort][] с количеством байт n_bcom[ComPort]
+ // вычисляет длину посылки RTU. Если длина не определена - возвращает NN_fict
+
+ int i_ret;
+
+ if( cb_COM[ComPort][1] == 16 )
+   i_ret=(((int)cb_COM[ComPort][6]) & 0xff) + 9;
+ else
+   i_ret=NN_fict;
+
+ return i_ret;
+}
+/*-------------------------------------------*/
+
+ int i1_slv,i2_slv;
+
+void  f_intr_SlvRTU()
+{
+  int exc;
+  int fn_cod;
+  int addr_beg,i,itmp;
+  int Slv_addrO,Slv_nmbO;
+  float ftmp;
+  union  { float f; unsigned long l; } o;
+  struct eee_dat *LIn_D;
+
+  // принятая команда проверена на контрольную сумму и находится в intrpr.bfcom
+  //  (без контрольной суммы)
+
+//---------------------------------------------------
+  fn_cod=intrpr.bfcom[1];
+
+
+#if(Slv_deb_rtu != 0)
+     if(flag_prn != 0) // QQQ
+     {
+      printf("\r\nN= %d ==",nn_comb);
+      for(i=0;i< nn_comb;i++)
+      printf(" %02X", (intrpr.bfcom[i] & 0X0FF) );
+
+      printf("\r\n");
+     }
+#endif
+
+  _fmemcpy(buf_tmpSR,intrpr.bfcom,(long int)(8) );
+  if(fn_cod== 3)
+  {   // чтение Int
+    Slv_addrO=f_get_intS(&intrpr.bfcom[2]);
+    Slv_nmbO=f_get_intS(&intrpr.bfcom[4]);
+
+    if(Slv_nmbO>125)
+        goto m_err_addr;
+
+
+    if( f_is_int(Slv_addrO) &&  f_is_int(Slv_addrO+Slv_nmbO-1) )
+    { // запрошены данные int
+
+      buf_tmpSR[0]=AddrSlv;
+      buf_tmpSR[1]=fn_cod;
+      buf_tmpSR[2]=Slv_nmbO+Slv_nmbO;
+
+      for(i1_slv=3,i=0;(i<Slv_nmbO)&&(i1_slv< (n_buf_RTU_s-3)) ;i++)
+       {
+//       itmp=Slv_int[Slv_addrO+i];
+         itmp=*(int *)list_Slv_int[Slv_addrO+i];
+         buf_tmpSR[i1_slv++]=(itmp>>8) & 0xff;
+         buf_tmpSR[i1_slv++]= itmp & 0xff;
+       }
+      goto out_b;
+    }
+    else
+     if( f_is_float(Slv_addrO) &&  f_is_float(Slv_addrO+Slv_nmbO-2) )
+     { // запрошены данные float
+      if(Slv_addrO & 0x01) goto m_err_addr;
+      if(Slv_nmbO  & 0x01) goto m_err_val;
+
+      buf_tmpSR[0]=AddrSlv;
+      buf_tmpSR[1]=fn_cod;
+      buf_tmpSR[2]=Slv_nmbO+Slv_nmbO;
+      Slv_nmbO=Slv_nmbO>>1;
+
+      addr_beg=(Slv_addrO-AddrLowFloat)>> 1;
+      for(i1_slv=3,i=0;(i<Slv_nmbO)&&(i1_slv< (n_buf_RTU_s-3));i++,i1_slv+=4)
+       {
+         if((addr_beg+i) < n_sl_flt0)
+           f_set_float( &buf_tmpSR[i1_slv],*list_Slv_flt[addr_beg+i],cod_float);
+         else
+           f_set_float( &buf_tmpSR[i1_slv],(float)*list_Slv_lng[addr_beg+i-n_sl_flt0],cod_float);
+//         f_set_long( &buf_tmpSR[i1_slv],*list_Slv_lng[addr_beg+i-n_sl_flt0]);
+       }
+      goto out_b;
+
+     }
+     else if((Slv_addrO == Addr2Slot1 ) && ( Slv_nmbO <= Slv2_slt1_lgth))
+     {  // чтение верхним контроллером данных Slot1
+
+      LIn_D=&Slv2_Slot1[0];
+
+m_slt:
+      buf_tmpSR[0]=AddrSlv;
+      buf_tmpSR[1]=fn_cod;
+      buf_tmpSR[2]=Slv_nmbO+Slv_nmbO;
+
+      for(i1_slv=3,i=0,i2_slv=0;(i<Slv_nmbO)&&(i1_slv< (n_buf_RTU_s-3)) ;i2_slv++)
+       {
+             switch( LIn_D[i2_slv].l )
+             {
+              case T_INT:
+                f_set_int( &buf_tmpSR[i1_slv], *((int *) LIn_D[i2_slv].ptr)  );
+                i1_slv+=2;
+                i++;
+                break;
+
+              case T_INT_L:
+                f_set_long( &buf_tmpSR[i1_slv], *((long int *) LIn_D[i2_slv].ptr) );
+                i1_slv+=4;
+                i+=2;
+                break;
+
+              case T_FLOAT:
+                f_set_float( &buf_tmpSR[i1_slv], *((float *) LIn_D[i2_slv].ptr),1 );
+                i1_slv+=4;
+                i+=2;
+                break;
+             }
+       }
+      goto out_b;
+
+     }
+    else goto m_err_addr;
+  }
+  if(fn_cod== 6)
+  {   // запись Int
+    Slv_addrO=f_get_intS(&intrpr.bfcom[2]);
+    if( f_is_int(Slv_addrO) )
+    { // запись данных int
+      *(int *)list_Slv_int[Slv_addrO]=f_get_intS(&intrpr.bfcom[4]);
+      if((exc=f_int_fnc(Slv_addrO)) != 0)
+       {
+         CMD_OUT_p = CMD_IN | 0x8000;
+         goto m_err;
+       }
+
+      CMD_OUT_p = CMD_IN; //  | 0x4000;
+      i1_slv=6;
+      goto out_b;
+    }
+    else goto m_err_addr;
+  }
+  if(fn_cod == 16 )
+  {   // запись нескольких значений
+    Slv_addrO=f_get_intS(&intrpr.bfcom[2]);
+    Slv_nmbO=f_get_intS(&intrpr.bfcom[4]);
+    if( f_is_int(Slv_addrO) &&  f_is_int(Slv_addrO+Slv_nmbO-1) )
+    { //   данные int
+
+     for(i1_slv=7,i=0;i<Slv_nmbO;i++,i1_slv+=2)
+     {
+      *(int *)list_Slv_int[Slv_addrO+i]=f_get_intS(&intrpr.bfcom[i1_slv]);
+      if((exc=f_int_fnc(Slv_addrO+i)) != 0)
+         goto m_err;
+     }
+
+     i1_slv=6;
+     goto out_b;
+
+    }
+    else
+     if( f_is_float(Slv_addrO) &&  f_is_float(Slv_addrO+Slv_nmbO-2) )
+     { //  данные float
+      if(Slv_addrO & 0x01) goto m_err_addr;
+      if(Slv_nmbO  & 0x01) goto m_err_val;
+
+      addr_beg=(Slv_addrO-AddrLowFloat)>> 1;
+      Slv_nmbO=Slv_nmbO>>1;
+      // i1_slv=7-3;
+      for(i1_slv=4,i=0;i<Slv_nmbO;i++,i1_slv+=4 )
+      {
+         if((addr_beg+i) < n_sl_flt0)
+            *list_Slv_flt[addr_beg+i]=f_get_float( &intrpr.bfcom[i1_slv], cod_float);
+         else
+            *list_Slv_lng[addr_beg+i-n_sl_flt0]=f_get_float( &intrpr.bfcom[i1_slv], cod_float);
+      }
+      i1_slv=6;
+      goto out_b;
+     }
+    else if((Slv_addrO == Addr2Slot2 ) && ( Slv_nmbO <= Slv2_slt2_lgth))
+    {
+     // Slot2  - принята команда и операнд команды
+// printf("\r\n SlvSlot2");
+      if(f_set_slv( &Slv2_Slot2[0],Slv_nmbO )) goto m_err_val;
+// printf("\r\n CMD_IN=%d",CMD_IN);
+      if((exc=f_int_fnc(7)) != 0)
+       {
+
+// printf("\r\n exc=%d",exc);
+         CMD_OUT_p = CMD_IN | 0x8000;
+         goto m_err;
+       }
+      CMD_OUT_p = CMD_IN; //  | 0x4000;
+      i1_slv=6;
+      goto out_b;
+
+    }
+    else goto m_err_addr;
+  }
+  else  goto m_err_fn ;
+
+//---------------------------------------------------
+m_err_fn  : // функция не распознана
+ exc=01;
+ goto m_err;
+
+m_err_addr: // недопустимый адрес
+ exc=02;
+ goto m_err;
+
+m_err_val : // недопустимые данные
+ exc=03;
+ goto m_err;
+
+m_err_slv : // ошибка в Slave
+ exc=04;
+ goto m_err;
+
+m_err:
+
+ fn_cod |= 0x80;
+
+ buf_tmpSR[0]=AddrSlv;
+ buf_tmpSR[1]=fn_cod;
+ buf_tmpSR[2]=exc;
+ i2_slv=3;
+
+#if(Slv_deb != 0)
+
+ printf("\n\r====");
+ for(i=0;i<i2_slv;i++)
+ {
+  printf("%02X ",buf_tmpSR[i]);
+ }
+ printf("====\n\r");
+#endif
+
+// f_stor_Slv(M_WR,buf_tmpSR,i2_slv);
+ f_prepareRTU(buf_tmpSR,&i2_slv);
+// fl_slv_out=i2_slv;
+
+ fl_slv_out=0;
+ ToComBufn(ComPortSlv,buf_tmpSR,i2_slv);
+ return;
+
+out_b:
+
+ buf_tmpSR[0]=AddrSlv;
+ buf_tmpSR[1]=fn_cod;
+
+ i2_slv=i1_slv;
+
+#if(Slv_deb != 0)
+
+ printf("\n\r====");
+ for(i=0;i<i2_slv;i++)
+ {
+  printf("%02X ",buf_tmpSR[i]);
+ }
+ printf("====\n\r");
+
+#endif
+
+//  f_stor_Slv(M_WR,buf_tmpSR,i2_slv);
+ if(f_prepareRTU1(buf_tmpSR,&i2_slv)) goto m_err_val;
+
+//  fl_slv_out=i2_slv;
+
+ fl_slv_out=0;
+ ToComBufn(ComPortSlv,buf_tmpSR,i2_slv);
+
+ if(ff_Slv != NULL)
+ {
+  (*ff_Slv)(); // старт функции
+  ff_Slv = NULL;
+ }
+ return;
+}
+/*-------------------------------------------*/
+/*-------------------------------------------*/
+int f_is_int(int addr)
+{
+ if((addr >= AddrLowInt) && (addr <= AddrHighInt) )
+    return 1;
+ else return 0;
+}
+/*-------------------------------------------*/
+int f_is_float(int addr)
+{
+ if((addr >= AddrLowFloat) && (addr <= AddrHighFloat) )
+    return 1;
+ else return 0;
+}
+/*-------------------------------------------*/
+int  f_int_fnc(int Addr)
+{ // return 1 - error, 0 - OK
+ int i_ret;
+ i_ret=0;
+ switch( Addr)
+ {
+  case Cmd_reg:
+       switch(*(int *)list_Slv_int[Addr] )
+       {
+        case 0:
+         break;
+//--------------------------------------
+        case 1:
+
+         if( (valve_mode > 0) && (valve_modeL > 0 ))
+           i_ret = RTU_Val;
+         else  if(valve_mode > 0)
+            {
+              Flag_Low = 0;
+              Flag_mass= 0;
+//            flag_prok=0;
+              i_ret= f_start_dlv();
+            }
+         else  if(valve_modeL > 0)
+            {
+              Flag_Low = 1;
+              Flag_mass= 0;
+//            flag_prok=0;
+              i_ret= f_start_dlv();
+            }
+         else
+           i_ret = RTU_Val;
+         break;
+//--------------------------------------
+
+
+#if !defined(BIO_1)
+
+
+        case 101:  // старт нижнего налива по объему
+            if(valve_modeL > 0)
+            {
+              Flag_Low = 1;
+              Flag_mass= 0;
+//            flag_prok=0;
+              i_ret= f_start_dlv();
+            }
+         else
+           i_ret = RTU_Val;
+
+
+         break;
+//--------------------------------------
+        case 121:  // старт нижнего налива по массе
+            if(valve_modeL > 0)
+            {
+              Flag_Low = 1;
+              Flag_mass= 1;
+//            flag_prok=0;
+              i_ret= f_start_dlv();
+            }
+         else
+           i_ret = RTU_Val;
+         break;
+//--------------------------------------
+        case 111:  // продолжение  нижнего налива по объему
+            if( (valve_modeL > 0) && (Flag_Low == 1))
+            {
+              Flag_mass= 0;
+        //    flag_prok=0;
+              if(Slv_float[0] > s_MVD[0].VolT )
+                i_ret = f_start_dlv11();
+            }
+         else
+           i_ret = RTU_Val;
+
+         break;
+//--------------------------------------
+        case 131:  // продолжение  нижнего налива по массе
+            if( (valve_modeL > 0) && (Flag_Low == 1))
+            {
+              Flag_mass= 1;
+    //        flag_prok=0;
+              if(Slv_float[0] > s_MVD[0].MassT )
+                i_ret = f_start_dlv11();
+            }
+         else
+           i_ret = RTU_Val;
+
+         break;
+//--------------------------------------
+
+#endif
+
+
+//--------------------------------------
+        case 201:  // старт верхнего налива по объему
+            if(valve_mode > 0)
+            {
+              Flag_Low = 0;
+              Flag_mass= 0;
+    //        flag_prok=0;
+              i_ret= f_start_dlv();
+            }
+         else
+           i_ret = RTU_Val;
+
+         break;
+//--------------------------------------
+        case 221:  // старт верхнего налива по массе
+            if(valve_mode > 0)
+            {
+              Flag_Low = 0;
+              Flag_mass= 1;
+         //   flag_prok=0;
+              i_ret= f_start_dlv();
+            }
+         else
+           i_ret = RTU_Val;
+         break;
+//--------------------------------------
+        case 211:  // продолжение  верхнего налива по объему
+            if( (valve_mode > 0) && (Flag_Low == 0))
+            {
+              Flag_mass= 0;
+  //          flag_prok=0;
+              if(Slv_float[0] > s_MVD[0].VolT )
+                i_ret = f_start_dlv11();
+            }
+         else
+           i_ret = RTU_Val;
+
+         break;
+//--------------------------------------
+        case 231:  // продолжение  верхнего налива по массе
+            if( (valve_mode > 0) && (Flag_Low == 0))
+            {
+              Flag_mass= 1;
+   //         flag_prok=0;
+              if(Slv_float[0] > s_MVD[0].MassT )
+                i_ret = f_start_dlv11();
+            }
+         else
+           i_ret = RTU_Val;
+
+         break;
+//--------------------------------------
+        case 300:  // ввод кода доступа автомобиля
+         i_ret= f_acces_code();
+         break;
+//--------------------------------------
+        case 310:  // ввод типа налива
+         i_ret= f_acces_page();
+         break;
+//--------------------------------------
+        case 320:  // ввод типа налива
+         i_ret= f_dsp_16();
+         break;
+//--------------------------------------
+        case 2:
+         i_ret= f_stop_dlv();
+         break;
+        case 3:
+         i_ret= f_alm_stop();
+         break;
+        case 4:
+         i_ret= f_rst_slv();
+         break;
+        case 5:
+         i_ret= f_CE_slv();
+         break;
+        case 6:
+         i_ret= f_WE_slv();
+         break;
+        case 7:
+         i_ret= f_Baud_slv();
+         break;
+        case 8:
+         i_ret=f_Zero_slv();
+         break;
+        case 9:
+  //       i_ret=f_SetOut_slv();
+         i_ret=f_flow_mod() ;
+        break;
+//-------------------------------
+        case 11:
+         i_ret = RTU_Val;
+         if( (valve_mode > 0) && (valve_modeL > 0 ));
+         else  if(valve_mode > 0)
+            { // продолжить верхний налив
+
+//           if( (Flag_Low == 0) && (Flag_mass== 0) && (flag_prok==0 ))
+             if(Flag_Low == 0)
+               if(Slv_float[0] > s_MVD[0].VolT )
+                i_ret = f_start_dlv11();
+            }
+         else  if(valve_modeL > 0)
+            { // продолжить нижний налив
+
+//           if( (Flag_Low == 1) &&(Flag_mass== 0) && (flag_prok==0 ))
+             if(Flag_Low == 1)
+               if(Slv_float[0] > s_MVD[0].VolT )
+                i_ret = f_start_dlv11();
+            }
+        break;
+//-------------------------------
+        case 17:  // fls
+         i_ret= f_fls();
+         break;
+
+        default:
+           f_cmd_prn();
+           i_ret= RTU_Val;
+         break;
+       }
+   default:
+       break;
+
+ }
+ return i_ret;
+}
+/*-------------------------------------------*/
+int f_stop_dlv()
+{ // return 1 - error, 0 - OK
+    if(sw_dlv_liq==3)
+    {
+       MmiGotoxy(0,0);   MmiPuts(list_avt[30]);  //" Отпуск остановлен            ",//30
+       MmiGotoxy(0,1);   MmiPuts(list_avt[35]);  //"      по команде Host   =     ",//35
+       State_SLV=Cmd_brk;
+
+       f_reg_cmn(11);
+
+       sw_dlv_liq=-1;
+    }
+    else if(sw_dlv_liq>0)
+    {
+      //  f_stop_cnt();
+      //  fl_GO=0;
+      //  fl_EQ=0;
+      //  OUT_VAR=0;
+          sw_dlv_liq=30;
+          key__1 = STOP_H;
+          f_reg_cmn(15);
+    }
+//  else return RTU_Val;
+    return 0;
+}
+/*-------------------------------------------*/
+int f_alm_stop()
+{ // return 1 - error, 0 - OK
+
+   f_icp_errS(Hst_alm);
+// f_alarm();
+// f_stop_cnt();
+
+ return 0;
+}
+/*-------------------------------------------*/
+int f_rst_slv()
+{ // return 1 - error, 0 - OK
+
+
+  StopUserTimerFun();
+  RestoreCom(1);
+  RestoreCom(2);
+  RestoreCom(3);
+  while(!IsCom4OutBufEmpty()) ;  /* Wait all message sent out of COM4 */
+  RestoreCom(4);
+  f_free_SlvBuf();
+
+    f_wr_evt(evt_res);
+    _asm cli
+    _asm hlt
+
+ return 0;
+}
+/*-------------------------------------------*/
+int f_fls()
+{ // return 1 - error, 0 - OK
+ flag_Slv=0;
+
+ RestoreCom(ComPortHost);
+ InstallCom(ComPortHost,115200L,8,0,1);
+
+ return 0;
+}
+/*-------------------------------------------*/
+int f_CE_slv()
+{ // return 1 - error, 0 - OK
+
+ if(FL_err)
+    f_cl_error();
+// else
+//   f_wr_evt(evt_clr_err);
+
+ sw_fst=0;
+ return 0;
+}
+/*-------------------------------------------*/
+
+long int Tim_set_out=2000;
+long int time_set_out=0;
+int flag_set_out=0;
+
+int f_SetOut_slv()
+{ // return 1 - error, 0 - OK
+// time_set_out=TimeStamp;
+// flag_set_out=1;
+// OUT_VAR=(int)Slv_float[0];
+ return 0;
+}
+
+//------------------------------------------
+int f_Zero_slv()
+{ // return 1 - error, 0 - OK
+
+
+          if(sw_dlv_liq >0)
+               return RTU_Val;
+          else if(fl_zeroing)
+               return RTU_Val;
+
+          f_clr_scr_MMI();
+          SetDisplayPage(EmptPage);
+
+          if(f_reset_zer_MVD() == 0)
+          {
+  //          MoveToXY(0,3);
+  //          MmiPrintf("Command Zeroing error ");
+  //          f_wr_evt(evt_MVD_CL_BS2);
+
+  //          MmiGotoxy(0,6); MmiPuts("ESC,ENTER  Return");
+  //          sw_mmi=-1;
+            return RTU_Val;
+          }
+
+          f_wr_evt(evt_MVD_CL_strt);
+
+          zero_time=TimeStamp;
+          if(ff_serv==NULL)
+          {
+           sw_mmi=18;
+           fl_zeroing=1;
+           sw_mvd_m1=0;
+           ff_serv=f_MVD_M3;
+
+           State_SLV = Zer_p;
+           f_reg_cmn(Zer_p_cmn);
+          }
+          else
+            return RTU_Val;
+          return 0;
+}
+//------------------------------------------
+int f_flow_mod()
+// установить режим отбражения массового расхода
+{ // return 1 - error, 0 - OK
+
+
+         if(sw_dlv_liq >0)
+               return RTU_Val;
+         else if(fl_zeroing)
+               return RTU_Val;
+
+         f_clr_scr_MMI();
+         SetDisplayPage(EmptPage);
+
+
+         State_SLV = Mod_flow_s;
+         f_reg_cmn(Mod_flow_s_cmn);
+         ff_serv=f_MVD_MM4;
+
+         sw_mvd_m1=20;
+         sw_mmi=122;
+         return 0;
+}
+//------------------------------------------
+int f_WE_slv()
+{ // return 1 - error, 0 - OK
+ ff_Slv=ff_we_slv;
+ return 0;
+}
+/*-------------------------------------------*/
+void ff_we_slv()
+{
+        if(f_wrt_eee()<0)
+        {
+          f_wr_evt(evt_we_err);
+        }
+        else
+        {
+          f_wr_evt(evt_we);
+        }
+}
+/*-------------------------------------------*/
+void ff_wr_strt_evt()
+{
+          f_wr_evt(evt_start_hst);
+}
+/*-------------------------------------------*/
+int f_start_dlv()
+{ // return 1 - error, 0 - OK
+
+int i_ret;
+
+
+
+#if defined(BIO_1)
+ if( (i7060_out[0] & (OUT5 | OUT6)) == 0)
+ {
+   i_ret = RTU_Val;
+   return i_ret;
+ }
+#endif
+   i_ret=0;
+ //  State_SLV = Cmd_err;
+
+   if(FL_err)
+    i_ret=RTU_Slv_err;
+   else if(Slv_float[0] <= 0)
+    i_ret = RTU_Val;
+   else if(flag_set_out)
+    i_ret = RTU_Val;
+   else if(fl_zeroing)
+    i_ret = RTU_Val;
+   else if(sw_dlv_liq<=0)
+   {
+       MassStamp=s_MVD[0].MassI;
+       VolStamp=s_MVD[0].VolI;
+       flag_dlv_fst=0;
+       flag_ZT=1;
+       flag_prn_mass=0;
+
+       *(int *)list_Slv_int[i_cfm]=0;
+       WD_PMP_flag=1;
+       State_SLV= Cmd_rcv;
+       dose_dlvr= Slv_float[0];
+       volume_f = Slv_float[0];
+       f_prn_slv1();
+       sw_dlv_liq=1;
+       sw_mmi=193;
+       Slv_float[1]=Slv_float[0];
+       Slv_float[0]=0;
+       ff_Slv=ff_wr_strt_evt;
+   }
+   else
+     i_ret = RTU_Val;
+   return i_ret;
+}
+/*-------------------------------------------*/
+int f_start_dlv11()
+{ // return 1 - error, 0 - OK
+  // старт без обнуления Totals - для продолжения
+int i_ret;
+
+
+#if defined(BIO_1)
+ if( (i7060_out[0] & (OUT5 | OUT6)) == 0)
+ {
+   i_ret = RTU_Val;
+   return i_ret;
+ }
+#endif
+
+
+   i_ret=0;
+ //  State_SLV = Cmd_err;
+
+   if(FL_err)
+    i_ret=RTU_Slv_err;
+   else if(Slv_float[0] <= 0)
+    i_ret = RTU_Val;
+   else if(sw_dlv_liq<=0)
+   {
+     if ( Flag_mass != 0 )
+     {
+         if(Slv_float[0] <= s_MVD[0].MassT)
+            return RTU_Val ;
+     }
+     else
+     {
+         if(Slv_float[0] <= s_MVD[0].VolT)
+            return RTU_Val ;
+     }
+
+     if((MassStamp==-1000.)&& (VolStamp==-1000.))
+     {
+       MassStamp=s_MVD[0].MassI-s_MVD[0].MassT;
+       VolStamp=s_MVD[0].VolI - s_MVD[0].VolT;
+     }
+
+//   if(flag_ZT == 0)
+         flag_dlv_fst=1;
+       flag_prn_mass=1;
+
+       *(int *)list_Slv_int[i_cfm]=0;
+       WD_PMP_flag=1;
+       State_SLV= Cmd_rcv;
+       dose_dlvr= Slv_float[0];
+       volume_f = Slv_float[0];
+       f_prn_slv1();
+       sw_dlv_liq=1;
+       sw_mmi=193;
+       Slv_float[1]=Slv_float[0];
+       Slv_float[0]=0;
+       ff_Slv=ff_wr_strt_evt;
+
+
+   }
+   else
+     i_ret = RTU_Val;
+   return i_ret;
+}
+/*-------------------------------------------*/
+/*-------------------------------------------*/
+int f_cmd_prn()
+{ // return 1 - error, 0 - OK
+
+#if(Slv_deb != 0)
+ printf(" \n\r== Command %d ==",*(int *)list_Slv_int[4]);
+#endif
+
+ return 0;
+}
+/*-------------------------------------------*/
+int f_Baud_slv()
+{
+int i_ret;
+   if(f_get_nb( (long int)Com_Baud_Slave) < 0  )
+   {
+ fin_e:
+    Com_Baud_Slave=ComBaudSlv;
+    i_ret = RTU_Val;
+   }
+   else
+   {
+     ComBaudSlv = Com_Baud_Slave;
+
+     RestoreCom(ComPortSlv );
+     if( InstallCom(ComPortSlv ,ComBaudSlv,Com_lgthSlv,Com_paritySlv,Com_stopSlv) < 0 ) goto fin_e;
+     i_ret = 0;
+   }
+   return i_ret;
+}
+//--------------------------------
+int f_set_slv( struct eee_dat *LIn_D, int Slv_nmbO )
+{
+int i,i1,i2;
+      for(i1=4,i=0,i2=0;i<Slv_nmbO;i2++ )
+      {
+
+             switch( LIn_D[i2].l )
+             {
+              case T_INT:
+
+                *((int *) LIn_D[i2].ptr)=f_get_int(&intrpr.bfcom[i1]);
+                i1+=2;
+                i++;
+                break;
+
+              case T_INT_L:
+
+                *((long int *) LIn_D[i2].ptr)= f_get_long(&intrpr.bfcom[i1+3]);
+                i1+=4;
+                i+=2;
+                break;
+
+              case T_FLOAT:
+
+                *((float *) LIn_D[i2].ptr)  = f_get_float( &intrpr.bfcom[i1], cod_float);
+                i1+=4;
+                i+=2;
+                break;
+
+              default:
+                   return 1;
+             }
+      }
+
+   return 0;
+}
+//--------------------------------------
+int f_acces_code()
+{
+int i_ret;
+   i_ret=0;
+
+   if(FL_err)
+    i_ret=RTU_Slv_err;
+   else if(sw_dlv_liq<=0)
+   {
+     sw_fst=0;
+     sw_mmi=200;
+   }
+   else
+     i_ret = RTU_Val;
+   return i_ret;
+
+}
+//--------------------------------------
+int f_acces_page()
+{  // ввод типа налива
+int i_ret;
+   i_ret=0;
+
+   if(FL_err)
+    i_ret=RTU_Slv_err;
+   else if(sw_dlv_liq<=0)
+   {
+     sw_fst=0;
+     sw_mmi=210;
+   }
+   else
+     i_ret = RTU_Val;
+   return i_ret;
+
+}
+//--------------------------------------
+int f_dsp_16()
+{  // отбражение строк 1-6
+int i_ret;
+   i_ret=0;
+
+   if(FL_err)
+    i_ret=RTU_Slv_err;
+   else if(sw_dlv_liq<=0)
+   {
+     sw_fst=0;
+     sw_mmi=220;
+   }
+   else
+     i_ret = RTU_Val;
+   return i_ret;
+
+}
+//--------------------------------------
+void f_reg_cmn_clk( )
+{
+ dose_dlvr_sl =dose_dlvr;
+
+
+/*
+ if(Reg_err) reg_cmn |= 0x8000;
+ else  reg_cmn &= 0x7fff;
+
+ reg_cmn= (reg_cmn & 0x80ff);
+ reg_cmn |= (( State_SLV << 8 ) & 0x0f00 )  | (( result_dlv << 12 ) & 0x7000 ) ;
+*/
+
+}
+//--------------------------------------
+void f_reg_cmn( int val)
+{
+
+ reg_cmn= (reg_cmn & 0xff00) | ( val & 0xff);
+
+}
+//--------------------------------------
+void f_reg_cmn_h( int val)
+{
+
+ reg_cmn= (reg_cmn & 0xff0f) | (( val << 4 ) & 0x0f0 );
+
+}
+
+

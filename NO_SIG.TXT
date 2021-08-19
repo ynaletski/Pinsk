@@ -1,0 +1,91 @@
+
+//--------------------
+void f_prn_no_sig_L()
+{
+int i;
+              EkdMoveToXY(0,8); EkdPuts("LOW: NO SIGNAL(s)      ");
+
+              EkdMoveToXY(0,9); EkdPuts( str_empt );
+              if( LVL_IN_L==0)
+              {
+                EkdMoveToXY(0,9); EkdPuts("LVL");
+ if((INP_OFP & 1)==0) EkdPuts("1");
+ if((INP_OFP & 2)==0) EkdPuts("2");
+ if((INP_OFP & 4)==0) EkdPuts("3");
+ if((INP_OFP & 8)==0) EkdPuts("4");
+              }
+              if( UZA_IN_L==0)
+              {
+               EkdMoveToXY(9,9); EkdPuts("UZA ");
+              }
+
+              if( ES_IN_L==0)
+              {
+               EkdMoveToXY(14,9); EkdPuts("E_STOP");
+              }
+
+              if( Pump1_OK==0)
+              {
+               EkdMoveToXY(9,9);
+               if(NFD_state[n_SU] != 0)
+                 EkdPuts("PMP1");
+               else
+                 EkdPuts("PMP3");
+              }
+
+              if( Pump2_OK==0)
+              {
+               EkdMoveToXY(14,9);
+               if(NFD_state[n_SU] != 0)
+                 EkdPuts("PMP2  ");
+               else
+                 EkdPuts("PMP4  ");
+              }
+
+}
+//--------------------
+void f_prn_no_sig_H()
+{
+int i;
+              EkdMoveToXY(0,10); EkdPuts("HIGH: NO SIGNAL(s)     ");
+
+              EkdMoveToXY(0,11); EkdPuts( str_empt );
+              i=0;
+              if( LVL_IN==0)
+              {
+               EkdMoveToXY(i,11); EkdPuts("LEVEL");
+               i+=6;
+              }
+              if( UZA_IN==0)
+              {
+               EkdMoveToXY(i,11); EkdPuts("UZA");
+               i+=4;
+              }
+
+              if( ES_IN==0)
+              {
+               EkdMoveToXY(i,11); EkdPuts("E_STOP");
+               i+=7;
+              }
+
+              if( TRAP_IN==0)
+              {
+               if((i+5)< 21)
+               {
+                 EkdMoveToXY(i,11); EkdPuts("TRAP");
+                 i+=5;
+               }
+              }
+
+              if( CONS_IN==0)
+              {
+               if((i+7)< 21)
+               {
+                 EkdMoveToXY(i,11); EkdPuts("KONSOL");
+                 i+=7;
+               }
+              }
+
+}
+//--------------------
+

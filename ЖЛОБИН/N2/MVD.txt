@@ -1,0 +1,19 @@
+>
+ Serial number 14288188
+ Sensor description: F/H300          
+ Tramsmitter description: 20120425        
+ Message: 20120425                        
+ Transmitter software revision : 31
+ Flow calibration: 7904.14.52      
+ Temp.calibration: 1.00000T.00000
+ D1 F155: 0.000
+ D2 F157: 1.000
+ K1 F159: 2110.693
+ K2 F161: 2538.782
+ Mass flow meter factor    F279: 1.000000
+ Volume flow meter factor  F281: 1.004000
+ Density flow meter factor F283: 0.996000
+ Cutoff for mass flow   F195: 1999.999878
+ Cutoff for volume flow F197: 3.000000
+ Cutoff for density     F149: 200.000000
+>

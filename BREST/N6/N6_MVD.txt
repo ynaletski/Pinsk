@@ -1,0 +1,22 @@
+>
+
+N6
+
+ Serial number 14151198
+ Sensor description: CMF200+         
+ Tramsmitter description: CONFIGURE XMTR  
+ Message: MASTER RESET -ALL DATA DESTROYED
+ Transmitter software revision : 28
+ Flow calibration: 212.674.45      
+ Temp.calibration: 1.00000T.00000
+ D1 F155: 0.000
+ D2 F157: 1.000
+ K1 F159: 10652.270
+ K2 F161: 12667.010
+ Mass flow meter factor    F279: 1.000000
+ Volume flow meter factor  F281: 1.001700
+ Density flow meter factor F283: 0.998300
+ Cutoff for mass flow   F195: 1999.999878
+ Cutoff for volume flow F197: 3.000000
+ Cutoff for density     F149: 200.000000
+>

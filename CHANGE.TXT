@@ -1,0 +1,1322 @@
+=====================
+04 Aug 2010
+
+host.h
+
+was:
+struct icp_mod
+{
+int port;
+int addr;
+char name[10];
+int TT;
+int CC;
+int FF;
+};
+
+now:
+struct icp_mod
+{
+int port;
+int addr;
+char name[10];
+int TT;
+int CC;
+int FF;
+int addr0;
+};
+
+host.c
+
+void f_result_Licp(int ii)
+
+was:
+  ICP_MOD[ii][licp_fnd].addr=i;
+  ICP_MOD[ii][licp_fnd].port=ii;
+
+now:
+  ICP_MOD[ii][licp_fnd].addr=i;
+  ICP_MOD[ii][licp_fnd].addr0=licp_addr;
+  ICP_MOD[ii][licp_fnd].port=ii;
+
+
+        if  ((intrpr.wrd[0]=='M') &&(intrpr.wrd[1]=='O') && (intrpr.wrd[2]=='D'))
+        {   //'MOD'
+         i1=ICP_mod_fnd[1]+ICP_mod_fnd[2]+ICP_mod_fnd[3];
+         if( ((i=f_123(4)) >= 0 ) &&  (i< i1 ) )
+         {
+           ICPl_MOD=f_get_mod_str(i);
+
+           addr0  = ICPl_MOD->addr0;
+           addr  = ICPl_MOD->addr;
+           baud   = baudrate_val[ICPl_MOD->CC];
+           TT_par = ICPl_MOD->TT ;
+           FF_par = ICPl_MOD->FF ;
+
+          if((i2=f_dis_set(ds_mod,4,4)) > 0)
+
+
+void f_mod_list()
+was:
+      printf("\n\r%3d %10s      %d    %02X   %6ld",i2,ICPl_MOD->name,ICPl_MOD->port,ICPl_MOD->addr,baudrate_val[ICPl_MOD->CC]);
+
+now:
+     if(ICPl_MOD->addr0 != ICPl_MOD->addr)
+      printf("\n\r%3d %10s      %d \(%02X\)%02X  %6ld",i2,ICPl_MOD->name,ICPl_MOD->port,ICPl_MOD->addr0,ICPl_MOD->addr,baudrate_val[ICPl_MOD->CC]);
+     else
+      printf("\n\r%3d %10s      %d    %02X   %6ld",i2,ICPl_MOD->name,ICPl_MOD->port,ICPl_MOD->addr,baudrate_val[ICPl_MOD->CC]);
+
+=====================
+ 27 Sep 2010
+ valve.c
+
+void f_en_two_valv()
+
+добавлено:
+
+ if( s_MVD[0].Press < P_min_valve)
+ {
+    i_dens &=~CLP0;
+    i_dens &=~OUT1;
+    i_dens &= ~OUT2;
+    return;
+ }
+
+=====================
+30 Sep 2010
+ nfp.c
+   added:
+
+  list1_dsr,
+  15,
+  &AddrSlv,
+  0,
+  255,
+  T_INT,
+//----------------
+....
+  list1_dsr,
+  16,   // Delta :Статус
+  &Delta[0].status,
+  0.,
+  1.,
+  T_INT,
+//-----------
+
+==============================
+18 Oct 2010
+nfp.c
+int f_cycle()
+
+было:
+     if(flag_pool)
+     {
+       if(MMI.status)
+       {
+         if(f_menu_MMI()) return -1;
+         f_MMI();
+       }
+     ....
+
+стало:
+     if(flag_pool)
+     {
+       if(f_menu_MMI()) return -1;
+       if(MMI.status)
+       {
+         f_MMI();
+       }
+     ...
+==============================
+
+21 Oct 2010
+
+slave.c
+dos_win.c
+Добавлен int регистр 18 mode_hst - запрещение ввода дозы из ВРФ.
+Добавлено "Link" на экран ВРФ в начальной странице при наличии связи.
+Добавлена команда '11' - продолжить отпуск дозы с текущего значения.
+
+rtu.c
+rtu.h
+
+ добавлена длина n_buf_RTU_s
+
+  unsigned char buf_tmp[n_buf_RTU_s];
+добавлена функция
+int f_prepareRTU1(char *msg,int *msg_length)
+
+ для контроля ответа Slave в размер n_buf_RTU_s.
+
+==============================
+23 Oct 2010
+
+dos_win.c
+ подправлено отображение при mode_hst != 0.
+
+
+==============================
+04 Nov 2010
+
+slave.c
+
+переменные cod_float, mode_r сделаны недоступными для Host
+
+//&cod_float,         // 32 тип кодировки float (аналогичен рег. 521 MVD,Byte order code for float registers)
+&Slv_int[2],        // 32 фиктивная переменная
+
+//&mode_r,            // 37 режим управл.давлением
+&Slv_int[2],        // 37 фиктивная переменная
+
+
+==============================
+19 Dec 2010
+nfp.c
+
+добавлено
+...
+//-----------
+  list1_dsr,
+  56,
+  &TSD[0].status,
+  0.,
+  1.,
+  T_INT,
+//-----------
+...
+//-----------
+  list1_dsr, //
+  19,
+  &kf_p,
+  0,
+  BIG_P,
+  T_INT_L,
+/*----------------*/
+  list1_dsr, //
+  20,
+  &kf_i,
+  0,
+  BIG_P,
+  T_INT_L,
+/*----------------*/
+  list1_dsr, //
+  21,
+  &kf_d,
+  0,
+  BIG_P,
+  T_INT_L,
+/*----------------*/
+...
+
+
+==============================
+21 Dec 2010
+
+
+nfp.c
+
+//-----------
+was
+  list1_dsr,
+  143,               // Аварийная кн. N вх.
+  &num_in1,
+  0,
+   8,
+  T_INT,
+//-----------
+now
+//-----------
+  list1_dsr,
+  143,               // Аварийная кн. N вх.
+  &num_in1,
+  0,
+  16,
+  T_INT,
+//-----------
+
+==============================
+05 Jan 2011
+valve.c
+
+void f_UP_DN()
+was:
+      if(ltmp > Per_up_min_v)
+       { // UP
+         if( s_MVD[0].Press < P_min_valve)  break;
+         if(ltmp > Per_up_max_v) ltmp = Per_up_max_v;
+now:
+
+      if(ltmp > Per_up_min_v)
+       { // UP
+         if( s_MVD[0].Press < P_min_valve)
+         {
+             Hop= Hop_cur;
+             YfN=Hop<<n_shft;
+             XfN_2  = 0;
+             XfN_1  = 0;
+             break;
+         }
+         if(ltmp > Per_up_max_v) ltmp = Per_up_max_v;
+-----------
+
+reg.h
+
+added
+
+#define Add_lim_h (2000)
+#define Add_lim  (Add_lim_h * k_div)
+
+reg.c
+
+was :
+   if(YfN >  LIM_FLOW_P)
+   {
+      YfN = LIM_FLOW_P;
+   }
+   else  if(YfN <  LIM_FLOW_M )
+   {
+      YfN = LIM_FLOW_M;
+   }
+
+now:
+   if(YfN >  LIM_FLOW_P)
+   {
+      YfN = LIM_FLOW_P;
+   /*
+      YfN-= Add_lim;
+      Hop_cur-=Add_lim_h;
+   */
+   /*
+      YfN     = Add_lim;
+      Hop_cur = Add_lim_h;
+      XfN_2  = 0;
+      XfN_1  = 0;
+   */
+   }
+   else  if(YfN <  LIM_FLOW_M )
+   {
+ //   YfN = LIM_FLOW_M;
+   /*
+      YfN += Add_lim;
+      Hop_cur +=Add_lim_h;
+   */
+
+      YfN  = Add_lim;
+      Hop_cur = Add_lim_h;
+      XfN_2  = 0;
+      XfN_1  = 0;
+   }
+
+==============================
+09 Jan 2011
+dos_win.c
+
+добавлено изменение пароля с клавиатуры ВРФ (4.6 Изменение пароля.)
+
+==============================
+20 Feb 2011
+
+ Добавлен контроль потока до открывания отсечного клапана
+ avt_ctrl.c
+ host.c
+ eee.c
+   Добавлена команда
+ DNO p1 p2 p3 p4;
+ p1 - максимальное время на нормализацию начальных условий, мс
+ p2 - время стабильного состояния (антидребезг) , мс
+ p3 - допустимое значение потока (не более), кг/ч
+ p4 - допустимое значение давления на выходе насоса (не менее),МПа
+ Дополнительные коды ошибок :
+ 0x40 Утечка при старте
+ 0x80 Низкое давление насоса при старте
+==============================
+03 Mar 2011
+
+-------------
+slave.c
+ добавлены данные Slot
+
+// Addr2Slot1 2000
+//  данные, читаемые верхним контроллером
+
+struct eee_dat Slv2_Slot1[]=
+ ...
+// Addr2Slot2   3000
+// данные, записываемые верхним контроллером
+
+struct eee_dat Slv2_Slot2[]=
+...
+
+-------------
+icp.c
+icp.h
+
+введена переменная
+
+int    Reg_err = 0;
+
+и ее установка в
+
+void f_icp_error(struct s_icp_dev *ICP_DEV,int error_type )
+void f_icp_errS(int error_type )
+void f_cl_error()
+-------------
+ введена возможность ввода среза массового и объемного расходов
+ по '9' в основном меню
+ по 'SHT_9' в основном меню - коррекция расхода
+
+==============================
+07 Mar 2011
+slave.c
+
+struct eee_dat Slv2_Slot2[]=
+добавлено:
+...
+&Flow_nom      , T_FLOAT         // 2   F1048  Расход начальный, л/с
+...
+-----------------
+icp.c
+закомментировано при ошибке
+ //   State_SLV=-1;
+-----------------
+slave.c
+
+закомментирован сброс ошибки watchdog при успешном приеме
+
+               ICP_error[icp_lst_max] &= ~(unsigned int)WD_host;
+
+==============================
+
+19 Mar 2011
+slave.c
+  добавллено:
+int flag_ZT=0; // признак успешного обнуления Total
+...
+int f_start_dlv()
+{ // return 1 - error, 0 - OK
+ ...
+       flag_ZT=1;
+}
+
+int f_start_dlv11()
+{ // return 1 - error, 0 - OK
+...
+     if(flag_ZT == 0)
+         flag_dlv_fst=1;
+...
+}
+
+---------------
+avt_ctrl.c
+
+int f_dlv_liq(int key)
+{
+...
+   case  6:
+    // ожидание завершения команды обнуления totalizers
+    if( MVD_t_rslt[0]>0)
+    {
+    ...
+     flag_ZT=0;
+    ...
+}
+==============================
+22 Mar 2011
+
+nfd.c
+avt_ctrl.h
+
+Введена функция
+
+void f_one_shot();
+
+ В течение 2.5 сек. после нажатия на кнопку "Start"
+ удерживает во включенном состоянии бит 0x8000
+ в OUT_VAR;
+
+==============================
+25 Mar 2011
+slave.c
+добавлена команда калибровки расходомера
+
+int f_Zero_slv()
+...
+int  f_int_fnc(int Addr)
+...
+        case 8:
+         i_ret=f_Zero_slv();
+         break;
+...
+
+==============================
+26 Mar 2011
+slave.c
+добавлена команда установки выходов контроллера
+
+int f_SetOut_slv()
+...
+int  f_int_fnc(int Addr)
+...
+        case 9:
+         i_ret=f_SetOut_slv();
+         break;
+...
+icp.c
+void f_cl_error()
+...
+  if(sw_mmi != 18)
+     fl_zeroing=0;
+   flag_set_out=0;
+...
+
+mvd.c
+
+void  f_ctrl_v2()
+...
+   if(flag_set_out)
+   {
+    if(f_timer(time_set_out,Tim_set_out)
+    {
+      flag_set_out=0;
+    }
+    else return;
+   }
+...
+==============================
+18 Apr 2011
+
+valve.c
+void f_reg_valve()
+
+
+   if( (s_MVD[0].VolI-VolStamp) > Vol_beg) Flow_dem = Flow_nom;
+   else  Flow_dem = Flow_beg;
+
+   if(ftmp < Mass_min)
+        if(Flow_dem > Flow_min) Flow_dem = Flow_min;
+
+   if(ftmp < Mass_min1)
+        if(Flow_dem > Flow_min1) Flow_dem = Flow_min1;
+
+   if(ftmp < Mass_min2)
+        if(Flow_dem > Flow_min2) Flow_dem = Flow_min2;
+
+перенесено выше
+
+ if ( Flag_mass != 0 )
+  {
+  ...
+---------------
+mvd.c
+ введена функция
+
+#define Addr_Vol (10)
+void f_init_Fl_m()
+{
+ if( AddrSlv <= Addr_Vol) Flag_mass=0;
+ else Flag_mass=1;
+}
+
+ Если p2.SLV <= 10 - отпуск по объему, иначе по массе
+---------------
+cor_adc.c
+ закомментированы все функции коррекции
+
+---------------
+20 Jul 2011
+
+nfd.c
+Изменена f_one_shot
+
+void f_one_shot()
+{
+ if(INP_VARi & O_SH_IN)
+
+host.c
+"MKS","MKI"
+
+24 Jul 2011
+valve.c
+
+void  f_en_reg_valv()
+
+изменен вывод сигналов для    valve_mode==3
+
+----------------
+21 Sep 2011
+valve.c
+
+void f_UP_DN()
+добавлено ограничение
+
+      if(ltmp > Per_up_min_v)
+       { // UP
+...
+         if(ltmp > Per_up_max_v)
+         {
+           ltmp = Per_up_max_v;
+           Hop_cur+=ltmp;
+           Hop= Hop_cur;
+           YfN=Hop<<n_shft;
+           XfN_2  = 0;
+           XfN_1  = 0;
+         }
+         else
+         {
+           Hop_cur+=ltmp;
+         }
+           Tim_up=ltmp+Per_UP_dl;
+
+       }
+      else if(ltmp < -Per_dn_min_v)
+       { // DN
+         State_UpDn=DN;
+         time_ch_v=TimeStamp;
+
+         if(ltmp < -Per_dn_max_v)
+         {
+           ltmp = -Per_up_max_v;
+           Hop_cur+=ltmp;
+           Hop= Hop_cur;
+           YfN=Hop<<n_shft;
+           XfN_2  = 0;
+           XfN_1  = 0;
+         }
+         else
+         {
+          Hop_cur+=ltmp;
+         }
+         Tim_dn=Per_DN_dl-ltmp;
+       }
+-----
+reg.h
+  was:
+#define k_div   (128L)
+#define n_shft  7
+  now
+#define k_div   (2048L)
+#define n_shft  11
+
+------------
+06 Oct 2011
+slave.c
+
+float *list_Slv_flt[]={
+...
+//&s_MVD[0].FlowM,    // 12  Массовый расход, кг/ч                      Mass flow      ,I247
+&s_MVD[0].FlowV,    // 12  Объемный расход, м3/ч
+
+struct eee_dat Slv2_Slot1[]=
+{
+
+...
+//&s_MVD[0].FlowM   , T_FLOAT ,  //2            Массовый расход, кг/ч
+&s_MVD[0].FlowV     , T_FLOAT ,  //2            Оъемный расход, м3/ч
+
+}
+
+------------
+
+11 Dec 2011
+mvd.c
+
+void f_MVD_rd_t(int ii)
+
+was:
+
+m_err:
+ MVD_t_err[nn]++;
+
+ if(MVD_t_err[nn]>=MVD_max_t_err)
+ {
+   MVD_t_err[nn]=MVD_max_t_err;
+   f_icp_error(&MVD[nn],WR_ERR );
+ }
+ f_queue_free(ii,&MVD_Rqst_T[nn]);
+
+ MVD_Rqst_T[ii].time_stamp=TimeStamp;
+ MVD[ii].n_transaction++;
+ f_queue_put(MVD[ii].port, &MVD_Rqst_T[ii]) ;
+
+-------------------
+now:
+
+
+m_err:
+ MVD_t_err[nn]++;
+
+ f_queue_free(ii,&MVD_Rqst_T[nn]);
+ if(MVD_t_err[nn]>=MVD_max_t_err)
+ {
+   MVD_t_err[nn]=MVD_max_t_err;
+   f_icp_error(&MVD[nn],WR_ERR );
+ }
+ else
+ {
+  MVD_Rqst_T[nn].time_stamp=TimeStamp;
+  f_queue_put(ii, &MVD_Rqst_T[nn]) ;
+ }
+  MVD[nn].n_transaction++;
+}
+
+
+------------
+16 Dec 2011
+
+slave.c
+
+int  f_int_fnc(int Addr)
+добавлено:
+...
+        case 0:
+         break;
+...
+
+host.c
+
+добавлены команды чтения-записи регистров
+
+"I"
+"F"
+
+------------
+24 Dec 2011
+
+slave.c
+int f_start_dlv11()
+добавлено:
+
+     if ( Flag_mass != 0 )
+     {
+         if(Slv_float[0] <= s_MVD[0].MassT)
+            return RTU_Val ;
+     }
+     else
+     {
+         if(Slv_float[0] <= s_MVD[0].VolT)
+            return RTU_Val ;
+     }
+
+------------
+25 Dec 2011
+mvd.cor
+
+добавлен
+
+  p4.CLM - максимальная ошибка отпуска для ввода коррекции (л,кг)
+
+float Cor_max = 20.;
+
+void f_MVD_cor()
+...
+   if(fabs(offs_cor) > Cor_max) goto m_end;
+...
+
+
+------------
+15 Apr 2012
+
+Добавлено вычисление  Message-Digest5
+для 2-го файла в корневом сегменте I7188XA
+
+добавлены файлы md5c.c, md5.h
+добавлено в host.c
+
+//---------------------------------
+      if (!strcmp(intrpr.wrd,"MD5" ))
+        {   //'MD5'
+          f_md5(0);
+          goto fin;
+        }
+//---------------------------------
+
+добавлено в dos_win.c
+
+long int tm_md=0;
+...
+       else if(key== '2') // 2 Версия sw
+       {
+
+         SetDisplayPage(EmptPage);
+         f_clr_scr_MMI();
+
+      MmiGotoxy(0,0);   MmiPrintf("   VER %s",sw_ver);
+      MmiGotoxy(0,2);   MmiPrintf("   MD5 counting ...");
+      MmiGotoxy(0,6);   MmiPuts(" ESC   - возврат в меню");
+         tm_md=TimeStamp;
+         sw_mmi=271;
+         break;
+       }
+...
+-----------------------------------
+
+    case 271:/* ожидание нажатия ESC,Enter */
+         if((key==ESC)||(key==ENTER)  )
+         {
+           goto m0_f1;
+         }
+         if( (f_timer(tm_md,(long int)1000 )) | fl_md_fst )
+         {
+           f_md5(1);
+           sw_mmi=272;
+         }
+         break;
+ /*========================================*/
+    case 272:
+
+       if((key==ESC)||(key==ENTER))  /* переход на начальную страницу */
+       {
+           goto m0_f1;
+       }
+       break;
+/*========================================*/
+
+----------------
+mvd.c
+
+void f_sim_MVD0()
+was:
+      if(s_MVD[nn].Dens > 0.00000002) s_MVD[nn].FlowV=s_MVD[nn].FlowM/(s_MVD[nn].Dens/K_mul_F);
+now:
+      if(s_MVD[nn].Dens > 0.00000002) s_MVD[nn].FlowV=s_MVD[nn].FlowM/(s_MVD[nn].Dens/1000.);
+
+----------------
+
+16 Apr 2012
+ref_t.c
+
+float f_get_ref_Dns(float D_obs, float Temp, float T_Ref)
+float f_get_T(float D1,float D_ref, float T_ref)
+
+добавлено через неск.мс.
+
+    if(flag_Slv !=0 )
+           f_SlaveRTU();
+
+------
+host.c
+добавлена команда "1" - измерить время приведения
+
+-----------------
+22 Apr 2012
+введен учет сжимаемости в ref_t.c
+
+mvd.c
+added:
+
+#define EXT (1)
+int mode_temp=0; // = EXT - use external termometer for Ref dens calculation
+int mode_refD=1;   // 1 - cnt average density
+                   // 0 - берется значение D,T по концу налива
+host.c
+
+ MDT p1,p2;
+   p1 - mode temp , 1 - use external termometer
+   p2 - mode count D_Ref , 1 - average during delivery
+
+-----------------
+30 Apr 2012
+
+For Delta VFD-C
+
+added:
+
+DeltaC.c
+DeltaC.h
+
+-----------------
+07 May 2012
+nfd.c
+....
+main()
+...
+  InstallUserTimerFunction_us(10000,fun_tim_u);
+...
+
+  StopUserTimerFun();
+
+------------------------------
+REF_T.C
+закомментировано
+
+//   if(flag_Slv !=0 )
+//         f_SlaveRTU();
+
+
+-----------------
+slave.c
+
+added:
+
+void fun_tim_u(void)
+
+changed:
+void f_SlaveRTU()
+
+-----------------
+host.c
+added:
+
+"RES"
+
+  StopUserTimerFun();
+  RestoreCom(1);
+  RestoreCom(2);
+  RestoreCom(3);
+  while(!IsCom4OutBufEmpty()) ;  /* Wait all message sent out of COM4 */
+  RestoreCom(4);
+  f_free_SlvBuf();
+
+
+-----------------
+09 May 2012
+
+---------------
+slave.c
+added:
+long int byte_timout_slv= 8 ;
+long int out_delay_slv = 5 ;
+
+---------------
+host.c
+"SLV" изм. p4 p5
+SLV p1 p2 p3 p4 p5
+       p1 - номер COM для Slave RTU
+       p2 - адрес Modbus для Slave
+       p3 - период сторож.таймера Host, мс
+-->   p4 - таймаут приема байта Slave_RTU, мс (8)
+-->   p5 - задержка ответа Slave_RTU,мс  (5)
+---------------
+
+eee.c
+
+was:
+&cod_float  ,sizeof(cod_float ),
+now:
+//&cod_float  ,sizeof(cod_float ),
+&fict_int1  ,sizeof(fict_int1 ),
+added:
+&byte_timout_slv    ,sizeof( byte_timout_slv  ),
+&out_delay_slv      ,sizeof( out_delay_slv    ),
+---------------
+
+slave.c
+
+int ffgets_SlvRTU(int ComPort)
+
+was:
+     if( f_timer(time_snd[ComPort],ToutAns[ComPort]))
+now:
+       if( f_timer(time_snd[ComPort],byte_timout_slv))
+
+закомментировано:
+
+was:
+        time_snd[ComPort]= TimeStamp;
+m_end:
+ ...
+
+now:
+...
+
+m_end:
+....
+
+...
+//     ToutAns[ComPort]=byte_timout_rtu[ComPort];
+--------
+void  f_intr_SlvRTU()
+
+
+
+m_err:
+out_b:
+
+was:
+ f_prepareRTU(buf_tmpSR,&i2);
+ ToComBufn(ComPortSlv,buf_tmpSR,i2);
+
+now:
+ f_prepareRTU(buf_tmpSR,&i2);
+ fl_slv_out=i2;
+// ToComBufn(ComPortSlv,buf_tmpSR,i2);
+
+----------------------
+dos_win.c
+
+m0_f1:
+main_menu:
+
+       else if(key==PASS)
+       ...
+was:
+               MmiGotoxy(2,5);   MmiPrintf("%5.3f МПа",s_MVD[0].Press);
+now:
+               MmiGotoxy(2,5);   MmiPrintf("%5.4f МПа",s_MVD[0].Press);
+----------------------
+05 Aug 2012
+ref_t.c
+
+float f_get_ref_Dns(float D_obs, float Temp,float Press, float T_Ref)
+was:
+    gamma=f_get_gamma (Temp,D_ref_old);
+    if(gamma == 0) return 1;
+now:
+    gamma=f_get_gamma (Temp,D_ref_old);
+//  if(gamma == 0) return 1;
+
+
+float f_get_gamma ( float Temp, float D_ref_15)
+added:
+    if( (D_ref_15 > 1000) || (D_ref_15 < 600)  ) return 0;
+
+----------------------
+float f_get_ref_Dns(float D_obs, float Temp,float Press, float T_Ref)
+
+  if( (D_obs > 1000) || (D_obs < 600)  ) return 0;
+
+----------------------
+
+23 Aug 2012 - debug
+
+-----------------------
+26 Aug - добавлен ввод кода доступа водителя.
+
+dos_win.c
+ 200:
+ 201:
+
+slave.c
+
+300:
+
+I7=300, результат в  - n_id_af - F1070 код доступа автомобиля
+
+----------------------
+28 Aug
+
+float f_get_VCF(float Temp, float D_ref)
+added
+  if( (D_ref > 1000) || (D_ref < 600)  ) return 1;
+
+slave.c
+
+void  f_intr_SlvRTU()
+
+ fl_slv_out=0;
+
+ ToComBufn(ComPortSlv,buf_tmpSR,i2_slv);
+
+----------------------
+16 Oct 2012
+DOS_WIN.C
+
+NOW:
+    case 201:
+        if(key==DATA)
+        {
+        ...
+          goto mm00;
+
+        }
+       else if(key==DATA_ESC)
+        {
+        ...
+          goto mm00;
+        }
+    break;
+----------------------
+17 Oct 2012
+nfd.c
+was:
+
+//-----------
+  list1_dsr,
+  22,   // OFP:Статус
+  &OFP[0].status,
+  0.,
+  1.,
+  T_INT,
+//-----------
+now:
+//-----------
+  list1_dsr,
+  23,   // OFP:Статус
+  &OFP[0].status,
+  0.,
+  1.,
+  T_INT,
+//-----------
+
+----------------------
+23 Oct 2012
+
+nfd.c
+was:
+/*----------------*/
+  list1_dsr,
+  98,
+  &CL_val[0],
+  -BIG_P,
+  BIG_P,
+  T_FLOAT,
+//---------------
+  list1_dsr,
+  156,
+  &CL_val_L[0],
+  -BIG_P,
+  BIG_P,
+  T_FLOAT,
+//---------------
+
+now:
+//-----------
+/*----------------*/
+  list1_dsr,
+  156,
+  &CL_val[0],
+  -BIG_P,
+  BIG_P,
+  T_FLOAT,
+//---------------
+  list1_dsr,
+  98,
+  &CL_val_L[0],
+  -BIG_P,
+  BIG_P,
+  T_FLOAT,
+//---------------
+
+----------------------
+11 Feb 2012
+
+ icp.c
+added
+
+void f_icp_error(struct s_icp_dev *ICP_DEV,int error_type )
+
+added
+
+ f_Drive_Stop();
+
+--------------------
+
+14 Jun 2013
+
+added
+
+dos_win.c
+
+long int Password_m=0;
+long int PassWm=0;
+-----------------------
+23 Jun 2013
+slave.c
+
+
+int f_Zero_slv()
+{ // return 1 - error, 0 - OK
+
+
+          if(sw_dlv_liq >0)
+               return RTU_Val;
+          else if(fl_zeroing)
+               return RTU_Val;
+added:
+          else if (s_MVD[0].reg_err  != 0)
+               return RTU_Val;
+------------
+24 Oct 2018
+reg.c
+added:
+
+float LIM_P_act = 5000L*k_div; // актуальное значение номинальной частоты привода
+float LIM_P_dec = 2500L*k_div; // значение ступени снижения частоты привода
+float LIM_P_beg = 3000L*k_div; // значение частоты привода при начальном наполнении
+
+
+void f_init_reg_P()
+now:
+
+ LIM_P_act = f_Beg * k_div;
+ YN= LIM_P_act; // частота вращения насоса, p3.LP
+ XN=0;
+ XN_1=0;
+ XN_2=0;
+ YN_OUT= YN >> n_shft;
+
+void f_reg_P()
+was:
+  YN= LIM_P; // максимальнодопустимая частота, p3.LP
+now:
+  YN= LIM_P_act; // частота, p3.LP
+
+
+eee.c
+
+added:
+&LIM_P_beg                ,sizeof( LIM_P_beg       ),
+&LIM_P_dec                ,sizeof( LIM_P_dec       ),
+
+----
+nfd.c
+was:
+#if defined(ICP_7017C)
+          if(I7017C[0].status)  f_7017C(0);
+#endif
+
+now:
+#if defined(ICP_7017C)
+          if(I7017C[0].status)  f_7017C(0);
+                  else
+                  {
+                YN= LIM_P_act;
+                YN_OUT= YN >> n_shft;
+                  }
+#endif
+----
+MVD.c
+deleted
+
+f_reset_Volt()
+f_reset_Masst()
+
+----
+
+valve.c
+
+void f_two_valve()
+added:
+
+float ... freq;
+...
+//-------------------
+  // set Pump frequency
+  freq=LIM_P;
+  if( (s_MVD[0].VolI-VolStamp) < Vol_beg)
+  {
+          if(freq> LIM_P_beg)
+            freq=LIM_P_beg;
+  }
+
+  if( ftmp < CL_val0)
+   if(freq>LIM_P_dec)
+        freq=LIM_P_dec;
+
+  LIM_P_act=freq;
+//------------------
+...
+
+void f_two_valveL()
+added:
+
+float ... freq;
+...
+//-------------------
+  // set Pump frequency
+  freq=LIM_P;
+
+
+  if( ftmp < CL_val_L0)
+   if(freq>LIM_P_dec)
+        freq=LIM_P_dec;
+
+  LIM_P_act=freq;
+//------------------
+
+nfd.c
+added:
+float f_LIM_P_beg,f_LIM_P, f_LIM_P_dec;
+
+
+  list1_dsr,
+  95,
+  &CL_val0,
+  0,
+  BIG_P,
+  T_FLOAT,
+/*----------------*/
+  list1_dsr,
+  96,
+  &CL_val_L0,
+  0,
+  BIG_P,
+  T_FLOAT,
+/*----------------*/
+...
+  list1_dsr,
+  73,
+  &f_LIM_P_beg,
+  0,
+  BIG_P,
+  T_FLOAT,
+//---------------
+  list1_dsr,
+  74,
+  &f_LIM_P,
+  0,
+  BIG_P,
+  T_FLOAT,
+//---------------
+  list1_dsr,
+  75,
+  &f_LIM_P_dec,
+  0,
+  BIG_P,
+  T_FLOAT,
+//---------------
+
+dos_win.c
+
+void f_before_MMI()
+...
+    f_LIM_P_beg=LIM_P_beg/k_div;
+    f_LIM_P    =LIM_P    /k_div;
+    f_LIM_P_dec=LIM_P_dec/k_div;
+...
+
+void f_after_MMI()
+
+    LIM_P_beg=f_LIM_P_beg*k_div;
+    LIM_P    =f_LIM_P    *k_div;
+    LIM_P_dec=f_LIM_P_dec*k_div;
+
+--------------
+03 Jun 2021
+valve.c
+не инициализировалась
+k_vol1
+
+void f_reg_valve()
+was:
+
+     VolT_int= f_int_v2();
+now:
+
+     VolT_int= f_int_v2();
+     k_vol1=k_vol;
+
+---------------
+
+14 Jun 2021
+
+//14.06.2021 YN
+
+added датчик разряжения перед насосом (4-20 ma)
+
+Через dsphost:                                  |       ВРФ
+'UP' (Underpressure)                            |
+p1. предел разницы давлений 1 (40 кг/м3 ~ 5%)   | "Допуст.ошибка N1  "
+p2. предел разницы давлений 2 (23 кг/м3 ~ 3%)   | "Допуст.ошибка N2  "
+p3. предел разницы давлений 3 ( 8 кг/м3 ~ 1%)   | "Допуст.ошибка N3  "
+p4. вкл/выкл контроль плотности 1 - вкл         | "Контроль разряж.  "
+p5. время на уменьшение расхода 1000 - 1сек.    | "Время ожидания    "
+p6. процент нового ном.расх. относит. старого 1 | "Процент замедл N1 " Flow_nom= Flow_nom*procent[FIRST]/100;
+p7. процент нового ном.расх. относит. старого 2 | "Процент замедл N2 "
+p8. процент нового ном.расх. относит. старого 3 | "Процент замедл N3 "
+
+---------------
+
+29.06.2021 YN
+
+уменьшен архив памяти с CDE до De

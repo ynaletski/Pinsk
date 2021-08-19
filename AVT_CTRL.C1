@@ -1,0 +1,2112 @@
+
+//  Измерение плотности СУГ
+//       sw_mmi=210;
+//       sw_dns=1;   - старт измерения плотности
+
+//       sw_mmi=211;
+//       sw_dns=12;  - завершение измерения плотности
+
+//      Прием  СУГ
+//     sw_mmi = 201;  - старт приема
+//         (sw_dlv_liq=1;)
+//  dose_dlvr = doze  ( vBIG_P )
+//     sw_dlv_liq=13; - останов приема
+
+//---------------------------
+// АГЗС , 1  колонка
+//---------------------------
+//                        номер входа (команда 'MKS')
+// INP_VAR D0   7060-IN1   1  Пистолет
+//         D1   7060-IN2   2  УЗА
+//         D2   7060-IN3   3  ES
+//         D3   7060-IN4   4
+//---------------------------
+//                        номер выхода (команда 'MKO')
+// OUT_VAR D0   7044-OUT1  1  Больший клапан колонки
+//         D1   7044-OUT2  2  Меньший клапапн колонки
+//         D2   7044-OUT3  3  Насос колонки
+//         D3   7044-OUT4  4  Клапан "Плотность"
+//         D4   7044-OUT5  5  Клапан "Паровая Фаза"
+//         D5   7044-OUT6  6  Сигнал "LVL 10%"
+//         D6   7044-OUT7  7  Сигнал "LVL 90%"
+//         D7   7044-OUT8  8  Клапан "Прием.больш."
+//
+//         D0   7044-OUT9  9   Клапан "Прием.меньш."
+//         D1   7044-OUT10 10  Насос приема от газовоза
+//         D2   7044-OUT11 11  Насос на газовозе
+//         D3   7044-OUT12 12  Клапан "Байпас"
+//
+//---------------------------
+
+//  "MKO 1 2 3 4 5 6 7 8 9"
+
+// OUT_VAR D0   7044-OUT1  1  Больший клапан
+//         D1   7044-OUT2  2  Меньший клапапн
+//         D2   7044-OUT3  3  Насос колонки
+//         D3   7044-OUT4  4  Клапан "Плотность"
+//         D4   7044-OUT5  5  Клапан "Паровая Фаза"
+//         D5   7044-OUT6  6  Сигнал "LVL 10%"
+//         D6   7044-OUT7  7  Сигнал "LVL 90%"
+//         D7   7044-OUT8  8  Клапан "Прием.больш."
+
+//         D0   7044-OUT9  9  Клапан "Прием.меньш."
+
+//---------------------------
+float F_Dns_off= 5;       // кг/ч  - расход для проверки закрывания клапана "плотность"
+float F_Dns_off_DLV= 40;  // кг/ч  расход для проверки закрывания клапана "плотность" после
+                          //        окончания отпуска (4)
+
+
+float F_Dns_off_DLVs= 20; // кг/ч  -   расход для проверки закрытого сост. клапана "плотность" перед
+                          //    открыванием клапанов отсекания дозы (3)
+
+
+long int T_Dns_off=10000; // мс, допустимое время закрывания клапана "плотность"
+long int T_Dns_NDB=2000;  // мс, время антидребезга при закрывании клапана "плотность"
+
+//---------------------------
+
+float Rcv_Result1=0;
+float Rcv_Result2=0;
+float Dens_Result=0;
+float Temp_Result=0;
+
+char list_avt[][31]={
+
+"Действие остановл.ESC - меню",  // 0
+"Sht-ESC очистка ошибок      ",  // 1
+"   !Нажата аварийная кнопка  ", // 2x
+"   Действие невозможно.      ", // 3x
+"    !Нет сигнала УЗА         ", // 4x
+"", // 5
+"", // 6
+"", // 7
+"", // 8
+"", // 9
+"", //10
+"!Достигнут предельный уровень ", //11x
+"                              ",//12
+" Выключение потока жидкости   ",//13x
+"",//14
+" ",//15
+"   Подготовка к приему        ",//16x
+"!Нет связи с расходомером 1  ",//17
+"!Нет связи с расходомером 2  ",//18
+"    Поверка расходомера(ов)   ",           //19
+"",//20
+"",//21
+"        Ошибки очищены        ",//22x
+" ESC - продолжить             ",//23x
+"",//24
+"       !Останов приема        ",//25x
+" ESC - меню , 1 - ЖФ, 2 - ПФ  ",//26x
+" ESC - меню , 4 - продолжить  ",//27x
+" ESC - меню                   ",//28x
+" Расход снизился до пред.знач.",//29
+"      Прием  остановлен       ",//30x
+"     Нажата кнопка =ESC=      ",//31x
+" Авария насоса при торможении ",//32x
+"",//33
+
+};
+
+//---------------------------
+//void f_alarm();
+
+float PressLvl_off0=0.05;
+float PressLvl_on0 =0.1;
+
+float PressLvlR_off0=0.05;
+float PressLvlR_on0 =0.1;
+
+long int time_t_snd=0;
+long int time_t_NDB=0;
+unsigned int OUT_VAR=0;    // состояние дискретных выходов
+unsigned int INP_VAR=0;    // состояние дискретных входов
+unsigned int INP_inv=0;    // маска инверсии входов
+unsigned int INP_VAR_c=0;  // копия состояния дискретных входов
+unsigned int INP_VARi=0;    // состояние дискретных входов
+unsigned int INP_MSK_OK=0;    // состояние дискретных входов
+unsigned int OUT_VAR_c=0;  // копия состояния дискретных входов
+unsigned int Out_en=0xffff;
+unsigned int Out_en_r=0xffff;
+
+int num_out1=1,num_out2=2;
+int num_out3=3,num_out4=4;
+int num_out5=6,num_out6=6;
+int num_out7=7,num_out8=8;
+int num_out9=9,num_out10=10;
+int num_out11=11,num_out12=12;
+int num_out13=13,num_out14=14;
+int num_out15=15,num_out16=16;
+
+int num_in1=1,num_in2=2;
+int num_in3=3,num_in4=4;
+
+int mski_inp1=0;
+int mski_inp2=0;
+int mski_inp3=0;
+int mski_inp4=0;
+
+//========================================
+int flag_O3r=0;
+//========================================
+
+int flag_ext_t=0;
+int Drive_SV_beg[2]={5000,5000};  // 50 Hz, значение частоты вращения
+int Drive_SA_beg[2]={20,20}; // текущее состояние времени ускорения 2 сек
+int Drive_SD_beg[2]={20,20};  // текущее состояние  замедления 2 сек на 100Гц
+
+int f_St_chk_fict()
+{
+ return 1;
+}
+int f_Rn_chk_fict()
+{
+ return 0;
+}
+void f_fict()
+{
+}
+
+int status_fct=0;
+int *DriveStatus=&status_fct;
+
+int DriveSV[3]={1000,1000,1000};
+int DriveSA[3]={100,100,100};
+int DriveSD[3]={100,100,100};
+int DriveState[3]={0,0,0};
+int DriveCurrent[3]={0,0,0};
+int DriveError[3]={0,0,0};
+
+int (*f_Drive_St_chk)()=f_St_chk_fict;
+int (*f_Drive_Rn_chk)()=f_Rn_chk_fict;
+void (*f_Drive_Stop)()=f_fict;
+void (*f_Drive_Run)()=f_fict;
+
+
+//              давление 2
+//          давление |
+//                 | |   0x60
+int analog_num[8]={6,7,0,0,0,0,0,0};
+float analog_scale[8]={1./MaxADC,1./MaxADC,1./MaxADC,1,1,1,1,1};
+float analog_offset[8]= {0,0,0,0,0,0,0,0};
+
+int stage_max=0;
+
+long int time_antd_p=0;
+long int time_antd_m=0;
+
+long int time_prb_plus=0;
+long int time_prb_minus=0;
+
+long int Tim_antd=320;
+long int Tim_prb_plus=1000;
+long int Tim_prb_minus=200;
+/*
+long int T_prb_plus_ltl =1000;
+long int T_prb_plus_big =1200;
+long int T_prb_minus_ltl=200;
+long int T_prb_minus_big=200;
+*/
+//----------------------------
+void f_prb_plus()
+{
+ time_antd_m=TimeStamp;
+ if( f_timer(time_prb_plus,Tim_prb_plus ) )
+ {
+   if( f_timer(time_antd_p,Tim_antd ) )
+   {
+    time_antd_p=TimeStamp;
+    time_prb_plus=TimeStamp;
+    time_prb_minus=TimeStamp;
+//  Tim_prb_plus=T_prb_plus_big;
+//  Tim_prb_minus=T_prb_minus_ltl;
+    stage_max+=1;
+    if(stage_max > 2) stage_max=2;
+   }
+ }
+}
+//---------------------------
+void f_prb_minus()
+{
+ time_antd_p=TimeStamp;
+ if( f_timer(time_prb_minus,Tim_prb_minus ) )
+ {
+
+   if( f_timer(time_antd_m,Tim_antd ) )
+   {
+     time_prb_minus=TimeStamp;
+     time_prb_plus=TimeStamp;
+//   Tim_prb_plus=T_prb_plus_ltl;
+//   Tim_prb_minus=T_prb_minus_big;
+     stage_max-=1;
+     if(stage_max < 0) stage_max=0;
+   }
+ }
+}
+//---------------------------
+void Out_on(int msk)
+{
+ OUT_VAR |= msk;
+}
+//-----------------------------
+void Out_off(int msk)
+{
+ OUT_VAR &= ~msk;
+}
+//---------------------------
+int flag_dlv_fst=0; // 0 - сбросить Mass total перед началом отпуска приема
+int flag_prn_mass=0;
+float dose_dlvr=0;
+int sw_dns=0;
+int i_LVL_c=0;
+int f_dens_m(int key)
+{
+    if((FL_err) && ((sw_dns != -1) &&  (sw_dns < 200))  )
+    {
+m_err0:
+      f_clr_scr_MMI();
+      f_disp_error();
+      Out_off(C_DNS | OUT3);
+      Out_off(OUT1 | OUT2 | OUT5 | OUT8 | OUT9);
+      sw_dns=200;
+      Temperature=s_MVD[0].Temp;
+      Density=s_MVD[0].Dens;
+      f_wr_evt(evt_dn_err);
+      time_t_snd=TimeStamp;
+      goto m1;
+    }
+
+  if ( ( (INP_VARi & E_S)== 0)  &&  (sw_dns != -1 )  ) goto m_err_ES;
+m1:
+  switch(sw_dns)
+  {
+   // начальное состояние - все клапаны закрыты,
+   // насос остановлен
+   // подготовка к измерению плотности
+
+   case 1:
+
+    f_icp_errS(0);
+    flag_rcv=0;
+    sw_dlv_liq=-1;
+    sw_dns=-1;
+      f_wr_evt(evt_dn_strt);
+   if( (OUT_VAR & (LV90 | LV10)) != 0 )
+    {
+       flagE_UZA=LVL_E;
+       f_icp_errS(UZA_off);
+//     MmiGotoxy(0,1);    MmiPuts(" !Уровень выше допустимого "
+       MmiGotoxy(0,1);    MmiPuts(list_avt[11]);
+       goto m_err;
+    }
+   if ((INP_VARi  & E_S  )== 0)
+    {
+//     MmiGotoxy(0,2);    MmiPuts("  Действие невозможно.       ");
+       MmiGotoxy(0,0);    MmiPuts(list_avt[3]);
+m_err_ES:
+       f_wr_evt(evt_dn_ES);
+//     f_icp_errS(ES_off);
+//     MmiGotoxy(0,1);    MmiPuts("  !Нажата аварийная кнопка   ");
+       MmiGotoxy(0,1);    MmiPuts(list_avt[2]);
+m_err:
+       Out_off(C_DNS+OUT3);
+       Out_off(OUT1 | OUT2 | OUT5 | OUT8 | OUT9);
+       f_set_o67();
+
+       // запрещение счета расходомера 1  (cutoff for Mass Flow)
+       f_MVD_WR((int)0,(int)MVD_WR_F,(int) 195,(int)0,(long int) 0,dens_cutoff);
+       sw_dns=-1;
+       return 0;
+    }
+       sw_dns=3;
+       break;
+
+   case 3:
+    f_set_o67();
+ MVD_t_rslt[0]=0;
+ MVD_Rqst_T[0].answ_com=f_MVD_rd_t;
+ MVD_Rqst_T[0].answ_flt=f_MVD_rd_t;
+ time_t_snd=TimeStamp;
+ MmiGotoxy(0,1);   MmiPuts("Подготовка расходомера");
+
+      // Stop totalizers
+ if( f_MVD_WR((int)0,(int)MVD_WR_C,(int) 2,(int)0,(long int) 0,0) == 0)
+ { // ошибка при отправке посылки MVD
+m_e1:
+       f_icp_errS(MVD_com);
+       MmiGotoxy(0,1);  MmiPuts(list_avt[17]);//MmiPuts("!Нет связи с расходомером 1 "); //17
+       goto m_err;
+ }
+  sw_dns=4;
+  break;
+
+//-----------------------------
+   case  4:
+    // ожидание завершения команды установки останова счета   Stop totalizers
+
+    f_set_o67();
+    if( MVD_t_rslt[0]>0)
+    {
+     sw_dns=41;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+m_e2:
+       f_icp_errS(MVD_com);
+       MmiGotoxy(0,1); MmiPuts(list_avt[17]);// MmiPuts("Таймаут связи с расходомером 1");
+       goto m_err;
+    }
+    break;
+//-----------------------------
+
+
+   case  41:
+     // разрешение массового расхода (cutoff for Mass Flow = 0)
+ MVD_t_rslt[0]=0;
+ f_set_o67();
+ //
+ time_t_snd=TimeStamp;
+ if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) 195,(int)0,(long int) 0,0) == 0)
+ { // ошибка при отправке посылки MVD
+    goto m_e1;
+ }
+    sw_dns=42;
+  break;
+
+//-----------------------------
+   case  42:
+    f_set_o67();
+    // ожидание завершения команды установки cutoff for Mass Flow
+    if( MVD_t_rslt[0]>0)
+    {
+     sw_dns=5;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+       goto m_e2;
+    }
+    break;
+//-----------------------------
+
+   case  5:
+     // запрещение счета расходомера  (cutoff for Vol Flow)
+ MVD_t_rslt[0]=0;
+ f_set_o67();
+ //
+ time_t_snd=TimeStamp;
+ if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) 197,(int)0,(long int) 0,dens_cutoff1) == 0)
+ { // ошибка при отправке посылки MVD
+    goto m_e1;
+ }
+    sw_dns=6;
+  break;
+
+//-----------------------------
+   case  6:
+    f_set_o67();
+    // ожидание завершения команды установки cutoff for Mass Flow
+    if( MVD_t_rslt[0]>0)
+    {
+     sw_dns=7;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+       goto m_e2;
+    }
+    break;
+//-----------------------------
+
+   case  7:
+     // запрещение счета расходомера 2 (cutoff for Vol Flow)
+
+   f_set_o67();
+  if((MVD[1].status==0 ) || ( (ICP_error[MVD2] != 0) && (Flag_check != 0) ) )
+  {
+     MVD_t_rslt[1]=1;
+     sw_dns=10;
+     break;
+  }
+
+ MVD_t_rslt[1]=0;
+ //
+ time_t_snd=TimeStamp;
+ MVD_Rqst_T[1].answ_com=f_MVD_rd_t;
+ MVD_Rqst_T[1].answ_flt=f_MVD_rd_t;
+ if( f_MVD_WR((int)1,(int)MVD_WR_F,(int) 195,(int)0,(long int) 0,dens_cutoff) == 0)
+ { // ошибка при отправке посылки MVD2
+m_e1_2:
+       f_icp_errS(MVD_com);
+       MmiGotoxy(0,1); MmiPuts(list_avt[18]);// MmiPuts("!Нет связи с расходомером 2 ");
+       goto m_err;
+ }
+    sw_dns=8;
+  break;
+
+//-----------------------------
+   case  8:
+    f_set_o67();
+    // ожидание завершения команды установки cutoff for Mass Flow 2
+    if( MVD_t_rslt[1]>0)
+    {
+     sw_dns=9;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+m_e2_2:
+       f_icp_errS(MVD_com);
+       MmiGotoxy(0,1); MmiPuts(list_avt[18]);// MmiPuts("Таймаут связи с расходомером 2");
+       goto m_err;
+    }
+    break;
+//-----------------------------
+   case  9:
+     // запрещение счета расходомера 2 (cutoff for Vol Flow)
+ f_set_o67();
+ MVD_t_rslt[1]=0;
+ //
+ time_t_snd=TimeStamp;
+ MVD_Rqst_T[1].answ_com=f_MVD_rd_t;
+ MVD_Rqst_T[1].answ_flt=f_MVD_rd_t;
+ if( f_MVD_WR((int)1,(int)MVD_WR_F,(int) 197,(int)0,(long int) 0,dens_cutoff1) == 0)
+ { // ошибка при отправке посылки MVD2
+   goto m_e1_2;
+ }
+    sw_dns=10;
+  break;
+
+//-----------------------------
+   case  10:
+    f_set_o67();
+    // ожидание завершения команды установки cutoff for Mass Flow 2
+    if( MVD_t_rslt[1]>0)
+    {
+     sw_dns=11;
+     i_LVL_c=i_LVL;
+     MmiGotoxy(0,1);    MmiPuts(list_avt[12]); // "   "
+     Out_on(C_DNS+OUT3);
+     Out_off(OUT1 | OUT2 | OUT5 | OUT8 | OUT9);
+     f_set_o67();
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+     goto m_e2_2;
+    }
+    break;
+//-----------------------------
+   case  11:
+       f_set_o67();
+       if((key==ESC)||(key==ENTER)  )    // переход в меню
+       {
+         MmiGotoxy(0,1);    MmiPuts(list_avt[31]); // "     Нажата кнопка =ESC=      "
+         sw_dns=110;
+         break;
+/*
+         Dens_Result= s_MVD[0].Dens;
+         Temp_Result= s_MVD[0].Temp;
+         Out_off(C_DNS);
+         time_t_snd=TimeStamp;
+         time_t_NDB=TimeStamp;
+*/
+       }
+   //  if( ((i_LVL_c ^ i_LVL) & i_LVL) != 0)
+       if( (OUT_VAR & (LV90 | LV10)) != 0 )
+       {
+ // остановить измерение если появился сигнал LVL90 или LVL10
+           flagE_UZA=LVL_E;
+           flagS_UZA=1;
+           f_icp_errS(UZA_off);
+           goto m_err0;
+       }
+       i_LVL_c = i_LVL;
+       break;
+//-----------------------------
+    case 110:
+
+         Dens_Result= s_MVD[0].Dens;
+         Temp_Result= s_MVD[0].Temp;
+         Out_off(C_DNS);
+         time_t_snd=TimeStamp;
+         time_t_NDB=TimeStamp;
+         sw_dns=111;
+         break;
+
+//-----------------------------
+    case 111:
+    // проверка закрывания клапана "плотность"
+    if( f_timer(time_t_snd, T_Dns_off ) )
+    {
+      f_icp_errS(DNS_not_off);
+      goto m_err0;
+    }
+
+    if( fabs(s_MVD[0].FlowM) < F_Dns_off) ;
+    else
+         time_t_NDB=TimeStamp;
+
+    if( f_timer(time_t_NDB, T_Dns_NDB ) )
+      {  // клапан "плотность" закрылся
+         sw_dns=12;
+         if(flag_prn)
+            printf("\n\rDNS_off %ld ms",(TimeStamp-time_t_snd));
+      }
+    break;
+
+//-----------------------------
+   case  12:
+       // завершение измерения плотности по команде
+         Reg_State |= DEN_fin;
+         LIn_sw[0]= ind_mDat2w; // для передачи данных  о результате плотности в ближайшей посылке, до передачи флага
+
+         f_wr_evt(evt_dn_stop);
+         Out_off(C_DNS);
+//       Out_off(C_DNS+OUT3);
+         Out_off(OUT1 | OUT2 | OUT5 | OUT8 | OUT9 | OUT10 | OUT11 | OUT12 );
+         f_set_o67();
+         sw_dns=121;
+         time_t_snd=TimeStamp;
+
+         time_t_snd=TimeStamp;
+
+            // запрещение счета расходомера 1  (cutoff for Mass Flow)
+         MVD_t_rslt[0]=0;
+         if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) 195,(int)0,(long int) 0,dens_cutoff) == 0)
+         { // ошибка при отправке посылки MVD
+            goto m_e1;
+         }
+   break;
+//-----------------------------
+   case 121:
+    f_set_o67();
+    // ожидание завершения команды установки cutoff for Mass Flow
+    if( MVD_t_rslt[0]>0)
+    {
+     sw_dns=13;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+       goto m_e2;
+    }
+    break;
+//-----------------------------
+//-----------------------------
+   case  13:
+       // завершение измерения плотности по команде
+         f_set_o67();
+         if( f_timer(time_t_snd,t_mvd_cor ) )
+         {  // время вышло
+           sw_dns=-2;
+           return ESC;
+         }
+         break;
+//-----------------------------
+  case 200: // заверешение по ошибке
+  if((MVD_fn[0] != 0) && (MVD_fn[0] != F_FAULT))
+  {
+      if( f_timer(time_t_snd,f_MVD_tim ) )
+      {
+       goto m_err;
+      }
+      break;
+  }
+        // запрещение счета расходомера 1  (cutoff for Mass Flow)
+     MVD_t_rslt[0]=0;
+     if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) 195,(int)0,(long int) 0,dens_cutoff) == 0)
+     { // ошибка при отправке посылки MVD
+        goto m_e1;
+     }
+   sw_dns=201;
+   break;
+//-----------------------------
+   case 201:
+    f_set_o67();
+    // ожидание завершения команды установки cutoff for Mass Flow
+    if( MVD_t_rslt[0]>0)
+    {
+     sw_dns=-1;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+       goto m_e2;
+    }
+    break;
+//-----------------------------
+   case  -1:
+       if((key==ESC)||(key==ENTER)  )    // переход в меню
+         return ESC;
+       else if (key==Sht_ESC)
+        {  // очистка ошибок
+          f_clr_scr_MMI();
+          SetDisplayPage(EmptPage);
+          f_cl_error();
+//        MmiGotoxy(0,2);    MmiPuts("        Ошибки очищены       ");
+//        MmiGotoxy(0,4);    MmiPuts(" ESC - продолжить            ");
+          MmiGotoxy(0,5);    MmiPuts(list_avt[22]);
+          MmiGotoxy(0,6);    MmiPuts(list_avt[23]);
+          return 0;
+        }
+       else
+        return 0;
+   default: break;
+  }
+//-----------------------------
+return 0;
+}
+//---------------------------
+
+void f_set_o67()
+{// устанавливает OUT_VAR  в соответствии с i_LVL;
+ OUT_VAR &= ~(   OUT6 | OUT7);
+ OUT_VAR |= (i_LVL & (OUT6 | OUT7 ));
+}
+//---------------------------
+void f_enable_cnt_rcv()
+{
+//printf("\r\n f_enable_cnt_r()");
+
+//  Out_on(RCVB | RCVL);
+
+  uk_buf=0;
+  if(FL_err)
+   if(Flag_check == 0)
+   {
+    f_wr_evt(evt_wrong_start);
+    return;
+   }
+  Out_en=0xffff;
+  flag_nal_r=1;
+  fl_GO_rcv=1;
+
+  flag_0=1;
+  flag_pool=1;
+  flag_O1=1;
+  flag_O3=1;
+
+  beg_flch=0;
+  flag_flch=0;
+  flag_nstg=0;
+  time_stg_ctrl=TimeStamp;
+  time_stg_ctrl0=TimeStamp;
+
+  flag_fill_ok=0;
+  f_wr_evt(evt_start_f+flag_rcv );
+
+  time_beg_fill=TimeStamp;
+}
+/* ---------------------------------------- */
+//---------------------------
+/* ---------------------------------------- */
+void f_stop_cnt_rcv()
+{
+//printf("\r\n f_stop_cnt_rcv() ");
+
+//  f_Drive_Stop();
+  Out_off(OUT10 | OUT11); // выключение насоса на газовозе и насоса приема на АГЗС
+
+  if(fl_GO_rcv)
+  {
+   ff_serv_N=f_MVD_cor_rcv;
+   i_CL_dens=0;
+   tm_mvd_p=TimeStamp;
+   t_prep_MVD=TimeStamp;
+  }
+  fl_GO_rcv=0;
+  cl_MVD_sw=0;
+  flag_pool=1;
+}
+/* ---------------------------------------- */
+void f_stop_cnt_rcvM()
+{
+//printf("\r\n f_stop_cnt_rcv() ");
+
+//  f_Drive_Stop();
+  Out_off(OUT10 | OUT11); // выключение насоса на газовозе и насоса приема на АГЗС
+
+  if(fl_GO_rcv)
+  {
+//   ff_serv_N=f_MVD_cor_rcv;
+   i_CL_dens=0;
+   tm_mvd_p=TimeStamp;
+   t_prep_MVD=TimeStamp;
+  }
+  fl_GO_rcv=0;
+  cl_MVD_sw=0;
+  flag_pool=1;
+}
+/* ---------------------------------------- */
+void f_stop_cnt_rcvB()
+{
+//printf("\r\n f_stop_cnt_rcv() ");
+
+//  f_Drive_Stop();
+  Out_off(OUT10 | OUT11); // выключение насоса на газовозе и насоса приема на АГЗС
+
+//if(fl_GO_rcv)
+  {
+   ff_serv_N=f_MVD_cor_rcv;
+   i_CL_dens=0;
+   tm_mvd_p=TimeStamp;
+   t_prep_MVD=TimeStamp;
+  }
+  fl_GO_rcv=0;
+  cl_MVD_sw=0;
+  flag_pool=1;
+}
+/* ---------------------------------------- */
+//---------------------------
+int sw_dlv_liq=0;
+int fl_GO_rcv=0;
+int flag_nal_r=0;
+int flag_rcv=0;
+int flagS_ES=0; // признак останова по нажатию ES
+int flagS_UZA=0; // признак останова по отсутствию UZA
+int flagE_UZA=0; // код ошибки
+int Flag_massR=1;
+int key__1=0;
+//int flag_fill_ok_R=0;
+
+int flagS_DLT=0; // признак останова по состояниию DELTA
+//---------------------------
+
+int f_rcv_liq(int key)
+{
+long int ltmp;
+
+  f_out_var_a();
+  if(Flag_check == 0)
+    if((FL_err) && (sw_dlv_liq != -1))
+    {
+      f_clr_scr_MMI();
+      f_disp_error();
+
+//    MmiGotoxy(0,5);   MmiPuts("Отпуск невозможен.ESC - меню");
+//    MmiGotoxy(0,6);   MmiPuts("Sht-ESC очистка ошибок");
+      MmiGotoxy(0,5);   MmiPuts(list_avt[0]);
+      MmiGotoxy(0,6);   MmiPuts(list_avt[1]);
+
+  //    f_stop_cnt_rcv();
+      Out_off(C_DNS+OUT3);
+      Out_off(OUT1 | OUT2 | OUT5 | OUT8 | OUT9);
+      sw_dlv_liq=-1;
+      flag_rcv=0;
+      Temperature=s_MVD[0].Temp;
+      Density=s_MVD[0].Dens;
+      f_wr_evt(evt_err_f+flag_rcv);
+    }
+
+  switch(sw_dlv_liq)
+  {
+   // начальное состояние - все клапаны закрыты,
+   // насос остановлен
+   // подготовка к приему жидкой фазы
+
+   case 1:  // начало приема жидкой фазы
+
+//   printf("\n\r sw =%d, VI =%f,%ld ms",sw_dlv_liq,s_MVD[0].VolI,TimeStamp-time_beg_fill);
+
+   test_int=sw_dlv_liq;
+   test_lng=TimeStamp;
+
+   flag_rcv=RCV_FLG;
+
+   f_icp_errS(0);
+   Out_off(C_DNS+OUT3);
+   Out_off(OUT1 | OUT2 | OUT5 | OUT8 | OUT9);
+
+   if(Flag_check != 0) goto mfc1;
+   if( (INP_VARi & E_S)==0 )
+    {
+       f_icp_errS(ES_off);
+//     MmiGotoxy(0,1);    MmiPuts("  !Нажата аварийная кнопка   ");
+       MmiGotoxy(0,1);    MmiPuts(list_avt[2]);
+m_err:
+//     MmiGotoxy(0,0);    MmiPuts("  Прием невозможен.         ");
+       MmiGotoxy(0,0);    MmiPuts(list_avt[3]);
+       flag_rcv=0;
+       sw_dlv_liq=-1;
+       return 0;
+    }
+   if( (INP_VARi & UZA)==0  )
+    {
+       flagE_UZA=UZA_E;
+
+       f_icp_errS(UZA_off);
+//     MmiGotoxy(0,1);    MmiPuts("  !Нет сигнала УЗА           ");
+       MmiGotoxy(0,1);    MmiPuts(list_avt[4]);
+       goto m_err;
+    }
+   if( (OUT_VAR & LV90) != 0 )
+    {
+       flagE_UZA=LVL_E;
+       f_icp_errS(UZA_off);
+//     MmiGotoxy(0,1);    MmiPuts(" !Уровень выше допустимого "
+       MmiGotoxy(0,1);    MmiPuts(list_avt[11]);
+       goto m_err;
+    }
+ mfc1:
+    sw_dlv_liq=2;
+//   printf("\n\r sw =%d, VI =%f,%ld ms",sw_dlv_liq,s_MVD[0].VolI,TimeStamp-time_beg_fill);
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+    MmiGotoxy(0,1);    MmiPuts(list_avt[16]);
+    break;
+//-----------------------------
+ // запись коррекции массы и объема для расходомера ЖФ
+   case  2:
+
+   ltmp=TimeStamp+5000;
+   LIn[0].time_stamp_pool=ltmp;
+   MVD[0].time_stamp_pool=ltmp;
+   MVD[1].time_stamp_pool=ltmp;
+
+ // запись коррекции массы для расходомера ЖФ
+
+ MVD_t_rslt[0]=0;
+ //
+ MVD_Rqst_T[0].answ_com=f_MVD_rd_t;
+ MVD_Rqst_T[0].answ_flt=f_MVD_rd_t;
+ time_t_snd=TimeStamp;
+
+                // Множитель массы
+   if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) 279,(int)0,(long int) 0,(float) M_fct[0]) == 0)
+   { // ошибка при отправке посылки MVD
+
+    if(Flag_check == 0)
+            goto m_e1;
+   }
+   sw_dlv_liq=21;
+   break;
+//----------------------------------
+   case  21:
+
+    if(key==ESC)    // переход в меню
+    {
+         OUT_VAR_a=0;
+         goto m_exit;
+    }
+    // ожидание завершения установки  множителя массы расходомера 1
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  goto mfc21;
+    if( MVD_t_rslt[0]>0)
+    {
+mfc21:
+     // множитель объема расходомера 1 Start totalizers
+      MVD_t_rslt[0]=0;
+      time_t_snd=TimeStamp;
+      if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) 281,(int)0,(long int) 0,(float) V_fct[0]) == 0)
+      { // ошибка при отправке посылки MVD
+         if(Flag_check == 0)
+               goto m_e1;
+      }
+     sw_dlv_liq=22;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+          goto m_e1;
+      goto mfc21;
+    }
+    break;
+//-----------------------------
+   case  22:
+
+    if(key==ESC)    // переход в меню
+    {
+         OUT_VAR_a=0;
+         goto m_exit;
+    }
+    // ожидание завершения установки  множителя объема расходомера 1
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  goto mfc22;
+    if( MVD_t_rslt[0]>0)
+    {
+mfc22:
+     sw_dlv_liq=3;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+          goto m_e1;
+      goto mfc22;
+    }
+    break;
+//-----------------------------
+   case  3:
+     MVD_t_rslt[0]=0;
+     if(flag_dlv_fst==0)
+       sw_dlv_liq=5;
+     else
+     {
+       sw_dlv_liq=64;
+       MVD_t_rslt[0]=1;
+       time_t_snd=TimeStamp;
+     }
+//   printf("\n\r sw =%d, VI =%f,%ld ms",sw_dlv_liq,s_MVD[0].VolI,TimeStamp-time_beg_fill);
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+   break;
+//-----------------------------
+   case  5:
+     // обнуление All totalizers расходомера 1
+ MVD_t_rslt[0]=0;
+ //
+ MVD_Rqst_T[0].answ_com=f_MVD_rd_t;
+ MVD_Rqst_T[0].answ_flt=f_MVD_rd_t;
+ //
+ time_t_snd=TimeStamp;
+//  MmiGotoxy(0,1);    MmiPuts("Обнуление отсчета расходомера");
+//  MmiGotoxy(0,1);    MmiPuts(list_avt[8]);
+//                                          | MassTotal
+// if( f_MVD_WR((int)0,(int)MVD_WR_C,(int) 56,(int)1,(long int) 0,(float)0)== 0)
+
+//                                      | All totalizers
+if( f_MVD_WR((int)0,(int)MVD_WR_C,(int) 3,(int)1,(long int) 0,(float)0)== 0)
+ { // ошибка при отправке посылки MVD
+m_e1:
+   if(Flag_check == 0)
+       f_icp_errS(MVD_com);
+    MmiGotoxy(0,1); MmiPuts(list_avt[17]);// !Нет связи с расходомером 1
+//  MmiGotoxy(0,1);  MmiPuts(list_avt[6]);
+   if(Flag_check == 0)
+       goto m_err;
+ }
+  sw_dlv_liq=6;
+//   printf("\n\r sw =%d, VI =%f,%ld ms",sw_dlv_liq,s_MVD[0].VolI,TimeStamp-time_beg_fill);
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+  break;
+
+//-----------------------------
+   case  6:
+    // ожидание завершения команды обнуления  расх-мера 1
+    if(key==ESC)    // переход в меню
+     {
+         OUT_VAR_a=0;
+         sw_dlv_liq=-2;
+         return ESC;
+     }
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  goto mfc3;
+    if( MVD_t_rslt[0]>0)
+    {
+ mfc3:
+      MVD_t_rslt[1]=0;
+      //
+      time_t_snd=TimeStamp;
+ MVD_Rqst_T[1].answ_com=f_MVD_rd_t;
+ MVD_Rqst_T[1].answ_flt=f_MVD_rd_t;
+
+     // обнуление Totalizers расходомера 2
+
+      if((MVD[1].status==0 ) || ( (ICP_error[MVD2] != 0) && (Flag_check != 0) ) )
+      {
+         MVD_t_rslt[1]=1;
+         sw_dlv_liq=63;
+// printf("\n\rA sw =%d, VI =%f,%ld ms",sw_dlv_liq,s_MVD[0].VolI,TimeStamp-time_beg_fill);
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+         break;
+      }
+
+      if( f_MVD_WR((int)1,(int)MVD_WR_C,(int) 3 ,(int)1,(long int) 0,(float)0)== 0)
+//    if( f_MVD_WR((int)1,(int)MVD_WR_C,(int) 56,(int)1,(long int) 0,(float)0)== 0)
+      { // ошибка при отправке посылки MVD
+m_e1_2:
+        if(Flag_check == 0)
+           f_icp_errS(MVD_com);
+        MmiGotoxy(0,1); MmiPuts(list_avt[18]);  //!Нет связи с расходомером 2
+        if(Flag_check == 0)
+          goto m_err;
+      }
+      MVD_t_rslt[1]=0;
+      sw_dlv_liq=63;
+// printf("\n\r sw =%d, VI =%f,%ld ms",sw_dlv_liq,s_MVD[0].VolI,TimeStamp-time_beg_fill);
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+      break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+            goto m_e1;
+      else goto mfc3;
+    }
+    break;
+//-----------------------------
+   case  63:
+    if(key==ESC)    // переход в меню
+    {
+      OUT_VAR_a=0;
+      sw_dlv_liq=-2;
+      return ESC;
+    }
+    // ожидание завершения команды обнуления VolTotal расх-мера 2
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) ) MVD_t_rslt[0]=1;
+    if((MVD[1].status==0 ) || ( (ICP_error[MVD2] != 0) && (Flag_check != 0) ) ) MVD_t_rslt[1]=1;
+    if(( MVD_t_rslt[1]>0) && ( MVD_t_rslt[0]>0))
+    {
+mfc5:
+     sw_dlv_liq=64;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+
+     flag_dlv_fst=1; // Mass Total и Volume Total обнулены в обоих расходомерах
+
+     s_MVD[0].VolT=0;
+     s_MVD[1].VolT=0;
+     s_MVD[1].VolTd=0;
+     s_MVD[0].MassT=0;
+     s_MVD[1].MassT=0;
+
+     flag_prn_mass=1;
+     vol2=0;
+     VolT_int=0;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+            goto m_e1;
+      else goto mfc5;
+    }
+    break;
+//-----------------------------
+   case  64:
+       // сохранение показаний массы ГРК
+
+     MVD_t_rslt[0]=0;
+
+     MVD_Rqst_T[0].answ_com=f_MVD_rd_t;
+     MVD_Rqst_T[0].answ_flt=f_MVD_rd_t;
+
+     time_t_snd=TimeStamp;
+
+     sw_dlv_liq=65;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+     // запись значения Mass_grk
+     Mass_grk=s_MVD[0].MassI+Mass_kd;
+     if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) Addr_Mass_grk,(int)0,(long int) 0, Mass_grk) == 0)
+     { // ошибка при отправке посылки MVD
+            test_float=2.;
+        if(Flag_check == 0)
+              goto m_e1;
+     }
+     break;
+//-----------------------------
+   case  65:
+       // сохранение показаний объема ГРК
+//  if(key==ESC)    // переход в меню
+//  {
+//       OUT_VAR_a=0;
+//       sw_dlv_liq=-2;
+//       return ESC;
+//  }
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  goto mfc6;
+    if( MVD_t_rslt[0]>0)
+    {
+    mfc6:
+     MVD_t_rslt[0]=0;
+
+     time_t_snd=TimeStamp;
+
+     sw_dlv_liq=66;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+     // запись значения Vol_grk
+     Vol_grk=s_MVD[0].VolI+Vol_kd;
+     if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) Addr_Vol_grk,(int)0,(long int) 0, Vol_grk) == 0)
+     { // ошибка при отправке посылки MVD
+
+            test_float=30.;
+        if(Flag_check == 0)
+              goto m_e1;
+     }
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+            goto m_e1;
+      else goto mfc6;
+    }
+    break;
+//-----------------------------
+   case  66:
+//    if(key==ESC)    // переход в меню
+//    {
+//         OUT_VAR_a=0;
+//         sw_dlv_liq=-2;
+//         return ESC;
+//    }
+       // изменение флага Fl_grk=Fl_grk_FLT;
+
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  goto mfc7;
+    if( MVD_t_rslt[0]>0)
+    {
+    mfc7:
+     MVD_t_rslt[0]=0;
+
+     time_t_snd=TimeStamp;
+
+     sw_dlv_liq=69;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+     // запись значения Fl_grk=Fl_grk_FLT;
+     Vol_grk=s_MVD[0].VolI+Vol_kd;
+     if( f_MVD_WR((int)0,(int)MVD_WR_I,(int) Addr_Fl_grk,(int)Fl_grk_FLT,(long int) 0, (float)0.) == 0)
+     { // ошибка при отправке посылки MVD
+ //  printf("\n\r sw =%d,%ld ms ERR_WR",sw_dlv_liq,TimeStamp-time_beg_fill);
+            test_float=32.;
+        if(Flag_check == 0)
+              goto m_e1;
+     }
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+            goto m_e1;
+      else goto mfc7;
+    }
+    break;
+//-----------------------------
+   case  69:
+     // разрешение счета расходомера 1 (cutoff for Mass Flow)
+    if(key==ESC)    // переход в меню
+    {
+         OUT_VAR_a=0;
+         goto m_exit;
+    }
+
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  MVD_t_rslt[0]=1;
+    if( MVD_t_rslt[0]>0)
+    {
+mfc8:
+     sw_dlv_liq=70;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+     MVD_t_rslt[0]=0;
+
+     MVD_Rqst_T[0].answ_com=f_MVD_rd_t;
+     MVD_Rqst_T[0].answ_flt=f_MVD_rd_t;
+
+     time_t_snd=TimeStamp;
+
+     // разрешение счета расходомера 1 (cutoff for Mass Flow)
+     if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) 195,(int)0,(long int) 0,(float) 0) == 0)
+     { // ошибка при отправке посылки MVD
+
+            test_float=33.;
+      if(Flag_check == 0)
+              goto m_e1;
+     }
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+          goto m_e1;
+      else goto mfc8;
+    }
+    break;
+//-----------------------------
+   case  70:
+    if(key==ESC)    // переход в меню
+    {
+         OUT_VAR_a=0;
+         goto m_exit;
+    }
+    // ожидание завершения команды установки cutoff for Mass Flow расходомера 1
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  goto mfc70;
+    if( MVD_t_rslt[0]>0)
+    {
+mfc70:
+     // разрешение счета расходомера 1 Start totalizers
+      MVD_t_rslt[0]=0;
+      time_t_snd=TimeStamp;
+      if( f_MVD_WR((int)0,(int)MVD_WR_C,(int) 2,(int)1,(long int) 0,(float) 0) == 0)
+      { // ошибка при отправке посылки MVD
+         if(Flag_check == 0)
+               goto m_e1;
+      }
+     sw_dlv_liq=7;
+
+   LIn[0].time_stamp_pool=TimeStamp+500;
+   MVD[0].time_stamp_pool=TimeStamp;
+   MVD[1].time_stamp_pool=TimeStamp+250;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+          goto m_e1;
+      goto mfc70;
+    }
+    break;
+
+//-----------------------------
+   case  7:
+    if(key==ESC)    // переход в меню
+    {
+         OUT_VAR_a=0;
+         goto m_exit;
+    }
+    // ожидание завершения команды Start totalizers расходомера 1
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  goto mfc9;
+    if( MVD_t_rslt[0]>0)
+    {
+     // разрешение счета расходомера 1 (cutoff for Volume Flow)
+mfc9:
+      MVD_t_rslt[0]=0;
+      time_t_snd=TimeStamp;
+      if( f_MVD_WR((int)0,(int)MVD_WR_F,(int) 197,(int)0,(long int) 0,(float) 0) == 0)
+      { // ошибка при отправке посылки MVD
+            test_float=34.;
+         if(Flag_check == 0)
+               goto m_e1;
+      }
+     sw_dlv_liq=8;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+          goto m_e1;
+    }
+    break;
+
+//-----------------------------
+   case  8:
+    if(key==ESC)    // переход в меню
+    {
+         OUT_VAR_a=0;
+         goto m_exit;
+    }
+ // ожидание завершения команды установки cutoff for Volume Flow  расходомера 1
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) )  goto mfc10;
+    if( MVD_t_rslt[0]>0)
+    {
+     // разрешение счета расходомера 2 (cutoff for Mass Flow)
+ mfc10:
+
+      if((MVD[1].status==0 ) || ( (ICP_error[MVD2] != 0) && (Flag_check != 0) ) )
+      {
+         MVD_t_rslt[1]=1;
+         sw_dlv_liq=82;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+   test_float=3.;
+         break;
+      }
+
+      MVD_t_rslt[1]=0;
+      time_t_snd=TimeStamp;
+      if( f_MVD_WR((int)1,(int)MVD_WR_F,(int) 195,(int)0,(long int) 0,(float) 0) == 0)
+      { // ошибка при отправке посылки MVD
+            test_float=35.;
+          if(Flag_check == 0)
+               goto m_e1_2;
+      }
+     sw_dlv_liq=81;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+          goto m_e1;
+      else goto mfc10;
+    }
+    break;
+
+//-----------------------------
+   case  81:
+    if(key==ESC)    // переход в меню
+    {
+         OUT_VAR_a=0;
+         goto m_exit;
+    }
+    // ожидание завершения команды установки cutoff for Mass Flow расходомера 2
+    if((MVD[1].status==0 ) || ( (ICP_error[MVD2] != 0) && (Flag_check != 0) ) )  goto mfc11;
+    if( MVD_t_rslt[1]>0)
+    {
+mfc11:
+     // разрешение счета расходомера 2 (cutoff for Volume Flow)
+      MVD_t_rslt[1]=0;
+      time_t_snd=TimeStamp;
+      if( f_MVD_WR((int)1,(int)MVD_WR_F,(int) 197,(int)0,(long int) 0,(float) 0) == 0)
+      { // ошибка при отправке посылки MVD
+            test_float=36.;
+          if(Flag_check == 0)
+               goto m_e1_2;
+      }
+     sw_dlv_liq=82;
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+   test_float=4.;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+      if(Flag_check == 0)
+                   goto m_e1_2;
+      else goto mfc11;
+    }
+    break;
+//-----------------------------
+   case  82:
+    if(key==ESC)    // переход в меню
+    {
+         OUT_VAR_a=0;
+         goto m_exit;
+    }
+ // ожидание завершения команды установки cutoff for Volume Flow расходомера 2
+    if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0) && (Flag_check != 0) ) ) MVD_t_rslt[0]=1;
+    if((MVD[1].status==0 ) || ( (ICP_error[MVD2] != 0) && (Flag_check != 0) ) ) MVD_t_rslt[1]=1;
+    if(( MVD_t_rslt[1]>0) && ( MVD_t_rslt[0]>0))
+    {
+  mfc12:
+     sw_dlv_liq=9;
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+     break;
+    }
+    if( f_timer(time_t_snd,f_MVD_tim ) )
+    {  // время вышло
+
+            test_float=2.;
+      if(Flag_check == 0)
+          goto m_e1_2;
+      else goto mfc12;
+    }
+    break;
+//-----------------------------
+   case  9:
+//  if(key==ESC)    // переход к процедуре отключения
+//      sw_dlv_liq=20;
+//  else
+    {
+//      Out_en_r=0xffff  ;
+      // запретить включение ЖФ
+      Out_en_r = ~(RCVL | OUT10 | OUT11 );   // Клапан "Прием.меньш." и насосы
+      sw_dlv_liq=11;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+//     MmiGotoxy(0,1);  MmiPuts("Включение потока жидкости    ");
+       MmiGotoxy(0,1);  MmiPuts(list_avt[10]);
+    }
+    break;
+//-----------------------------
+   case  11:
+       //  Включение потока жидкости
+   // volume_f=dose_dlvr;
+   // vol_f=dose_dlvr;
+   // Dens0=s_MVD[0].Dens;
+
+      f_enable_cnt_rcv();
+
+      MmiGotoxy(0,0);
+      if(Flag_check == 0)
+       if(dose_dlvr != vBIG_P)
+        {
+         if ( Flag_massR != 0 )
+             MmiPrintf(" Прием дозы %g кг         ",dose_dlvr);
+         else
+           MmiPrintf(" Прием дозы %g л          ",dose_dlvr);
+        }
+       else
+          MmiPuts("  Прием без дозировки        ");
+//    MmiGotoxy(0,1);      MmiPuts("                              ");
+
+      MmiGotoxy(0,1);      MmiPuts(list_avt[12]);
+      if(Flag_check != 0)
+      {
+        MmiGotoxy(0,0);  MmiPuts(list_avt[19]);  //  Поверка
+        if((MVD[0].status==0 ) || ( (ICP_error[MVD1] != 0)  ) )
+        {
+          MmiGotoxy(0,1);      MmiPuts(list_avt[17]);
+        }
+        else if((MVD[1].status==0 ) || ( (ICP_error[MVD2] != 0)  ) )
+        {
+          MmiGotoxy(0,1);      MmiPuts(list_avt[18]);
+        }
+      }
+
+//    MmiGotoxy(0,2);      MmiPuts("                              ");
+      MmiGotoxy(0,2);      MmiPuts(list_avt[12]);
+      MmiGotoxy(0,6);  MmiPuts(list_avt[26]);
+
+      sw_dlv_liq=12;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+   break;
+//-----------------------------
+   case  12:
+       //  прием
+
+
+         if(Flag_check == 0)
+         {
+           MmiGotoxy(25,0);
+           if( (Out_en_r & OUT9)==0  )
+              MmiPuts("  ");
+           else if( OUT_VAR & OUT9  )
+               MmiPuts("ЖФ");
+           else
+               MmiPuts("жф");
+
+           MmiGotoxy(28,0);
+           if( (Out_en_r & OUT5)==0  )
+              MmiPuts("  ");
+           else if( OUT_VAR & OUT5  )
+               MmiPuts("ПФ");
+           else
+               MmiPuts("пф");
+         }
+
+
+    if((FL_err != 0) && (Flag_check == 0) )   // переход к процедуре отключения
+    {
+        key__1=ESC;
+        sw_dlv_liq=30;
+    //  printf("\n\r sw =A %d,%ld ms",sw_dlv_liq,TimeStamp-time_beg_fill);
+    }
+    else if(key==ESC)       // переход к процедуре отключения
+    {
+        key__1=key;
+        sw_dlv_liq=30;
+// printf("\n\r sw =B %d,%ld ms",sw_dlv_liq,TimeStamp-time_beg_fill);
+    }
+    else if(key=='1')
+    {
+      Out_en_r ^= (RCVL | OUT10 | OUT11 );   // Клапан "Прием.меньш."  и насосы
+    }
+    else if(key=='2')
+    {
+      Out_en_r ^= OUT5;  // Клапан "Паровая Фаза"
+    }
+    else if(fl_GO_rcv == 0 ) // переход к завершению по прекращению приема
+    {
+      key__1=-1;
+      if(Flag_check == 0)
+      {
+        MmiGotoxy(0,0);   MmiPuts(list_avt[25]);  //"       !Останов приема       "
+      }
+//    MmiGotoxy(0,1);   MmiPuts(list_avt[25]);
+      sw_dlv_liq=30;
+// printf("\n\r sw =C %d,%ld ms",sw_dlv_liq,TimeStamp-time_beg_fill);
+    }
+
+    if( (Out_en_r & RCVL) == 0 )
+    { // запрещение контроля останова потока
+       flag_nstg=0;
+       time_stg_ctrl=TimeStamp;
+       time_stg_ctrl0=TimeStamp;
+    }
+    break;
+//-----------------------------
+   case  13:
+       //  останов приема
+        key__1=ESC;
+        sw_dlv_liq=30;
+// printf("\n\r sw =%d,%ld ms",sw_dlv_liq,TimeStamp-time_beg_fill);
+    break;
+//-----------------------------
+   case  30:
+      // выключение клапанов регулирующих расход
+      // поочередно с задержкой Tim_prb_minus
+
+      Out_en =  ~RCVB;
+
+      if(Flag_check == 0)
+        time_t_snd=TimeStamp;
+
+      if(Flag_check == 0)
+        sw_dlv_liq=32;
+      else
+        sw_dlv_liq=40;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+//    }
+      break;
+//-----------------------------
+   case  32:
+
+    if( f_timer(time_t_snd,Tim_prb_minus ) )
+    {  // время вышло
+      Out_en &= ~RCVL;
+      time_t_snd=TimeStamp;
+      sw_dlv_liq=33;
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+    }
+      break;
+//-----------------------------
+   case  33:
+
+    if( f_timer(time_t_snd,Tim_prb_minus ) )
+    {  // время вышло
+      sw_dlv_liq=40;
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+    }
+      break;
+//-----------------------------
+//-----------------------------
+   case  40:
+      // останов потока
+
+       Temperature=s_MVD[0].Temp;
+       Density=s_MVD[0].Dens;
+       f_stop_cnt_rcvM();
+       if(Flag_check == 0)
+         sw_dlv_liq=41;
+       else
+         sw_dlv_liq=44;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+
+// printf("\n\r sw =%d,%ld ms",sw_dlv_liq,TimeStamp-time_beg_fill);
+//     MmiGotoxy(0,1);  MmiPuts(" Выключение потока жидкости   ");
+          MmiGotoxy(0,1);
+       if(Flag_check == 0)
+       {
+          MmiPuts(list_avt[13]);
+       }
+       else
+          MmiPuts("   Прекращение операции      ");
+
+       time_t_snd=TimeStamp;
+
+    break;
+//-----------------------------
+   case  41:
+      // ожидание останова двигателя насоса
+
+     if( f_timer(time_t_snd,T_Mot_Stop ) )
+     {  // время вышло
+m_mot_not:
+            test_float=40.;
+       if(Flag_check == 0)
+         f_icp_errS(MotNotStop);
+       else goto mfc20;
+       Temperature=s_MVD[0].Temp;
+       Density=s_MVD[0].Dens;
+       key__1=0;
+//     f_wr_evt(evt_est_f+flag_rcv);
+//    "      Отпуск остановлен       ", //30
+       if(Flag_check == 0)
+       {
+           MmiGotoxy(0,0);
+           MmiPuts(list_avt[30]);
+       }
+   // " Авария насоса при торможении ",//32
+       MmiGotoxy(0,1);  MmiPuts(list_avt[32]);
+   // " ESC - меню                   ",//28
+       MmiGotoxy(0,6);  MmiPuts(list_avt[28]);
+       sw_dlv_liq=-1;
+
+// printf("\n\r A sw =%d,%ld ms",sw_dlv_liq,TimeStamp-time_beg_fill);
+       flag_rcv=0;
+     }
+     else
+     {
+       if( *DriveStatus ==0)
+       {
+mfc20:
+         sw_dlv_liq=44;
+// printf("\n\r A sw =%d,%ld ms",sw_dlv_liq,TimeStamp-time_beg_fill);
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+
+            test_float=20.;
+         time_t_snd=TimeStamp;
+         break ;
+       }
+
+       if(f_Drive_St_chk() == 1)
+       {
+         sw_dlv_liq=44;
+
+   test_int=sw_dlv_liq;
+   test_lng1=TimeStamp;
+            test_float=21.;
+
+         time_t_snd=TimeStamp;
+       }
+     }
+     break;
+//-----------------------------
+   case  44:
+
+       sw_dlv_liq=50;
+       test_float=41.;
+// printf("\n\rA sw =%d,%ld ms",sw_dlv_liq,TimeStamp-time_beg_fill);
+  //   flag_rcv=0;
+
+
+       if(key__1== ESC)
+       {
+m_esc:
+
+         if(Flag_check == 0)
+         {
+          MmiGotoxy(0,0);   MmiPuts(list_avt[30]);  //" Отпуск остановлен            ",//30
+         }
+          MmiGotoxy(0,1);   MmiPuts(list_avt[31]);  //" Нажата кнопка   ESC          ",//31
+          MmiGotoxy(0,6);   MmiPuts(list_avt[27]);  //" ESC - меню , 4 - продолжить  ",//27
+          break;
+       }
+       else if(key__1== STOP_E)
+       {
+        MmiGotoxy(0,1);   MmiPuts(list_avt[33]);  //"     Нажата кнопка =STOP=     ",//31
+
+        if(Flag_check == 0)
+        {
+         MmiGotoxy(0,0);   MmiPuts(list_avt[30]);  //" Прием остановлен            ",//30
+        }
+        MmiGotoxy(0,6);   MmiPuts(list_avt[28]);  //" ESC - меню                   ",//28
+        break;
+       }
+       else if (FL_err)
+       {
+         f_clr_scr_MMI();
+         f_disp_error();
+//       MmiGotoxy(0,6);       MmiPuts("Отпуск прерван.ESC - меню    ");
+         MmiGotoxy(0,6);       MmiPuts(list_avt[15]);
+         break;
+       }
+
+//          MmiGotoxy(0,0);   MmiPuts(" Отпуск остановлен            "  );
+         if(Flag_check == 0)
+         {
+             MmiGotoxy(0,0);   MmiPuts(list_avt[30]);
+         }
+//          MmiGotoxy(0,6);       MmiPuts(" ESC - меню    ");
+            MmiGotoxy(0,6);       MmiPuts(list_avt[28]);
+       if(flag_fill_ok !=0)
+          {
+//          MmiGotoxy(0,1);       MmiPuts(" Доза отпущена     ");
+            MmiGotoxy(0,1);
+
+            if ( Flag_massR != 0 )
+              MmiPrintf(" Доза %g кг принята            ",dose_dlvr);
+            else
+              MmiPrintf(" Доза %g л принята              ",dose_dlvr);
+
+            dose_dlvr=vBIG_P;
+
+            break;
+          }
+          else if(flag_flch !=0)
+          {
+//          MmiGotoxy(0,1);       MmiPuts(" Расход снизился до пред.знач.");
+            MmiGotoxy(0,1);       MmiPuts(list_avt[29]);
+            MmiGotoxy(0,6);   MmiPuts(list_avt[27]);  //" ESC - меню , 4 - продолжить  ",//27
+            break;
+          }
+          else break;
+//-----------------------------
+   case  50:
+
+       if((key==ESC)||(key==ENTER)  )    // переход в меню
+       {
+ m_exit:
+         MmiGotoxy(0,0); MmiPuts(list_avt[12]);
+         MmiGotoxy(9,0); MmiPuts("Выход в меню");
+         f_stop_cnt_rcvB();
+         sw_dlv_liq=51;
+         time_t_snd=TimeStamp;
+         return 0;
+       }
+       else if(key=='4')       // продолжить
+       {
+         if((flag_flch !=0 ) || (key__1== ESC))
+         {
+             sw_dlv_liq=11;
+             MmiGotoxy(0,6);       MmiPuts(list_avt[28]);
+         }
+         return 0;
+       }
+       break;
+
+//-----------------------------
+   case  51:
+    if(ff_serv_N== NULL)
+    {
+       flag_rcv=0;
+       OUT_VAR_a=0;
+
+       sw_dlv_liq=-2;
+       return ESC;
+    }
+    else
+     if( f_timer(time_t_snd,(t_mvd_cor*5) ) )
+     {  // время вышло
+      ff_serv_N = NULL;
+      f_icp_errS(MVD_com);
+      Temperature=s_MVD[0].Temp;
+      Density=s_MVD[0].Dens;
+      f_wr_evt(evt_est_f+flag_rcv);
+      OUT_VAR_a=0;
+      sw_dlv_liq=-2;
+      return ESC;
+     }
+//-----------------------------
+    case -1:
+       if((key==ESC)||(key==ENTER)  )    // переход в меню
+       {
+         MmiGotoxy(0,0);   MmiPuts("   Выход в меню");
+         f_stop_cnt_rcvB();
+         sw_dlv_liq=51;
+         time_t_snd=TimeStamp;
+         OUT_VAR_a=0;
+         sw_dlv_liq=-2;
+         return ESC;
+       }
+       else if (key==Sht_ESC)
+        {  // очистка ошибок
+          f_clr_scr_MMI();
+          SetDisplayPage(23);
+          f_cl_error();
+//        MmiGotoxy(0,2);    MmiPuts("        Ошибки очищены       ");
+//        MmiGotoxy(0,4);    MmiPuts(" ESC - продолжить            ");
+          MmiGotoxy(0,5);    MmiPuts(list_avt[22]);
+          MmiGotoxy(0,6);    MmiPuts(list_avt[23]);
+          OUT_VAR_a=0;
+          sw_dlv_liq=-2;
+          return ESC;
+        }
+       else
+         return 0;
+//-----------------------------
+  }
+  return 0;
+}
+//-----------------------------
+
+int flag_nstg=0;
+long int time_stg_ctrl=0;
+long int time_stg_ctrl0=0;
+long int Tim_stg_ctrl0=40000;
+long int Tim_stg_ctrl=8000;
+
+int Flag_check=0;
+
+void  f_chk_stg()
+{
+// контролирует состояние прохождения жидкости при отпуске
+//
+// Если после вкл.контроля не все клапаны,управляющие расходом, открыты
+// или расход меньше допустимого  отпуск прекращается
+//
+// Контроль включается через Tim_stg_ctrl0 (если !=0) после начала отпуска или
+// через Tim_stg_ctrl (если !=0) после максимального открытия клапанов.
+
+  if((fl_GO_rcv) && ( Flag_check==0))
+  {
+   if((flag_rcv!=0) && ((Tim_stg_ctrl != 0) || ( Tim_stg_ctrl0 != 0 )  ) )
+   // прием
+   {
+     if(flag_nstg == 0)
+     {
+       if(stage_max != 2)  time_stg_ctrl=TimeStamp;
+
+       if( f_timer(time_stg_ctrl,Tim_stg_ctrl) )
+          flag_nstg=1;
+
+       if( Tim_stg_ctrl0 != 0 )
+         if( f_timer(time_stg_ctrl0,Tim_stg_ctrl0) )
+           flag_nstg=1;
+     }
+     else
+     {
+        if( stage_max != 2)
+        {
+           flag_flch=1;
+           f_stop_cnt_rcvM(); // останов приема
+        }
+        else if(flag_O1 != 0)
+        {
+          if (( val_flch_R != 0 ) && ( val_flch_R  > s_MVD[0].FlowM ))
+          {
+           flag_flch=1;
+           f_stop_cnt_rcvM(); // останов приема по переполнению бака
+          }
+        }
+        else
+        {
+          if ( (val_flch2_R  != 0.) && (  val_flch2_R  > s_MVD[0].FlowM ))
+          {
+           flag_flch=1;
+           f_stop_cnt_rcvM(); // останов отпуска по переполнению бака
+          }
+        }
+     }
+
+   }
+
+
+  }
+  return;
+}
+//-----------------------------------
+//-----------------------------
+int i_bypass=0;
+
+int f_ctrl_rcv()
+{  // управление клапанами и отсекание дозы при приеме
+int itmp;
+float ftmp;
+long int ltmp;
+
+ // при приеме расходомер считает в +
+  VolT_int= f_int_v2();
+  ftmp=  dose_dlvr - VolT_int;
+
+// в ftmp сколько литров осталось
+
+ itmp= 0;
+ if(fl_GO_rcv == 1)
+ {
+  if((FL_err != 0) && (Flag_check == 0) )   // переход к процедуре отключения
+  {
+    flag_O3=0;
+    f_stop_cnt_rcvM();
+    goto m_end;
+  }
+  TimeOut3=TimeStamp;
+        // больший клапан
+  if(flag_O1)
+    if( (ftmp-k_vol*CL_T1R )> CL_valR[0])
+    {
+      itmp |= OUT8 | OUT5;  // больший клапан и пар
+    }
+    else flag_O1=0;
+        // меньший клапан
+  if( (ftmp-k_vol*CL_T2R )> CL_valR[1]) itmp |= OUT9;
+
+  if(flag_pool==1)
+   if( (ftmp-k_vol*CL_T3 )<= 0)
+    {
+     flag_pool=0;
+     ltmp=TimeStamp+CL_T4;
+//   I7060[0].time_stamp_pool=ltmp;
+//   I7060[1].time_stamp_pool=ltmp;
+     I7017C[0].time_stamp_pool=ltmp;
+     LIn[0].time_stamp_pool=ltmp;
+     MMI.time_stamp_pool=ltmp;
+//   WDOG[0].time_stamp_pool=ltmp;
+    }
+  if(itmp == 0)
+  {// завершение по достижении заданного объема
+    vol_mom=VolT_int;
+    vol_mom0=vol2;
+    flow_mom=k_vol;
+
+    flag_fill_ok=1;
+    f_stop_cnt_rcvM();
+
+  }
+
+//if(flag_O1)
+  {
+    f_dens_r();
+    itmp &= i_dens;
+    itmp |= i_bypass;
+  }
+ }
+  // управление насосами
+ if(flag_O3)
+  if( f_timer(TimeOut3,Out3_delayR_off ))
+  {
+
+   Dens_Result= s_MVD[0].Dens;
+   Temp_Result= s_MVD[0].Temp;
+
+   flag_O3=0;
+  }
+  else  itmp |= OUT10 | OUT11;
+
+ m_end:
+   return itmp;
+}
+//---------------------------
+
+float P_gas=1.0, P_bypass=1.4;
+
+void f_dens_r()
+{// функция анализирует состояние плотности и формирует маску выключения при приеме
+ //  при необходимости уменьшения расхода отпуска
+  float ftmp;
+
+
+  if(s_MVD[0].Press > P_gas)
+     i_dens =  0 ;   // клапан пар
+  else
+     i_dens =  OUT5; // клапан пар
+
+  if(s_MVD[0].Press > P_bypass)
+    i_bypass = OUT12;
+  else
+    i_bypass = 0;   // управление байпасом, OUT12
+
+
+  if( f_timer(time_beg_fill,cl2_delayR_off) ==0 )
+  { // запретить включение меньшего клапана первые cl2_delay_off мс после начала приема
+    time_chg_den=TimeStamp;
+    time_antd_m=TimeStamp;
+    time_antd_p=TimeStamp;
+    time_prb_plus=TimeStamp;
+    beg_flch=0;
+  }
+  else
+       i_dens |= OUT9;
+
+  if( f_timer(time_beg_fill,cl1_delayR_off) ==0 )
+  { // запретить включение большего клапана первые cl1_delay_off мс после начала приема
+//    i_dens &=~OUT1;
+  }
+  else
+       i_dens |= OUT8;
+
+    ftmp = s_MVD[0].Press - s_MVD[0].PressG - s_MVD[0].PressB;
+    s_MVD[0].PressD=ftmp;
+
+    if( ftmp < PressLvlR_off0)
+          f_prb_minus();
+    else if( ftmp > PressLvlR_on0 )
+          f_prb_plus();
+    else
+    {
+      time_antd_p=TimeStamp;
+      time_antd_m=TimeStamp;
+    }
+
+     if(stage_max==0)
+       i_dens=~(OUT8 | OUT9) ;            // закрыть оба клапана
+     else if(stage_max==1)
+       i_dens &= ~(OUT8) ;  // закрыть больший клапан
+
+}
+//---------------------------
+void f_sens()
+{ // проверяет состояние кнопки ES и UZA при отпуске/приеме СУГ
+  // сигналы исчезают  - прием прерывается
+  // inp1 - ES
+  // inp2 - UZA
+  // (OUT_VAR & LV90)
+
+if(Flag_check == 0)
+  if (fl_GO_rcv  != 0)
+  {
+       if( (INP_VARi & UZA)==0  )
+        {
+           flagE_UZA=UZA_E;
+m_err:
+           flagS_UZA=1;
+m_err0:
+           f_icp_errS(UZA_off);
+m_err1:
+           f_stop_cnt_rcvM();
+           sw_dlv_liq=-1;
+  test_float=42;
+//           flag_rcv=0;
+           f_clr_scr_MMI();
+           f_disp_error();
+
+//         MmiGotoxy(0,5);   MmiPuts("Отпуск невозможен.ESC - меню");
+//         MmiGotoxy(0,6);   MmiPuts("Sht-ESC очистка ошибок");
+           MmiGotoxy(0,5);   MmiPuts(list_avt[0]);
+           MmiGotoxy(0,6);   MmiPuts(list_avt[1]);
+           goto m1;
+        }
+m2:
+       if( (INP_VARi & E_S)==0 )
+        {
+           flagS_ES=1;
+           f_icp_errS(ES_off);
+           goto m_err1;
+
+        }
+        if( (OUT_VAR & LV90) != 0 )
+        {
+           flagE_UZA=LVL_E;
+           goto m_err0;
+        }
+m1:
+/*
+  if(flag_O3!=0)
+  {
+    if( *DriveStatus != 0)
+    {
+       if(f_Drive_Rn_chk() != 1)
+       {
+         flagS_DLT=1;
+         f_icp_errS(DLT_off);
+         f_stop_cnt_rcvM();
+       }
+    }
+  }
+*/
+
+  }
+
+    if(fl_GO)
+    {
+    if( (OUT_VAR & LV10) != 0 )
+     {
+      f_icp_errS(LVL_min);
+      flag_O4=0;
+      f_stop_cnt();
+     }
+    }
+
+  return;
+}
+//---------------------------
+void f_out_var_a()
+{
+ if( OUT_VAR & (OUT10 | OUT11) ) OUT_VAR_a=0;
+ else
+     OUT_VAR_a = OUT7;
+}
+//---------------------------
+
+

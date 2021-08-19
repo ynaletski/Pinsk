@@ -1,0 +1,25 @@
+@ECHO OFF
+SET TMP=C:\WINDOWS\TEMP
+SET TEMP=C:\WINDOWS\TEMP
+SET PROMPT=$P$G
+SET PATH=C:\WINDOWS;C:\WINDOWS\COMMAND;C:\PE2;C:\NC;C:\TOOL_DSP;C:\ti\bin;C:\ti\cc\bin;C:\ti\c2000\cgtools\bin;C:\ti\bin\utilities\tconf;C:\PCAD\EXE;C:\QC25\BIN;C:\TC\BIN;C:\TC\INCLUDE;
+SET C_DIR=c:\tool_dsp
+
+SET C2000_C_DIR=C:\ti\c2000\cgtools\include;C:\ti\c2000\cgtools\lib;
+SET C2000_A_DIR=C:\ti\c2000\cgtools\include;C:\ti\c2000\cgtools\lib;
+SET TI_DIR=C:\ti
+
+SET LIB=C:\QC25\LIB
+SET INCLUDE=C:\QC25\INCLUDE
+
+rem LoadHigh D:\DOS\MOUSE.COM
+rem lh smartdrv
+rem lh mouse
+rem SET PATH=%PATH%;C:\PROGRA~1\COMMON~1\AUTODE~1
+SET PATH=%PATH%
+mode con codepage prepare=((866) C:\WINDOWS\COMMAND\ega3.cpi)
+mode con codepage select=866
+keyb ru,,C:\WINDOWS\COMMAND\keybrd3.sys
+lh nc
+SET PATH=%PATH%;C:\PROGRA~1\ATITEC~1\ATICON~1
+
