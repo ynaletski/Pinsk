@@ -2422,8 +2422,47 @@ struct dis_set  ds_mki[]=
 /*----------------*/
 };
 
-//14.06.2021 YN
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
+struct dis_set  ds_upcp[]=
+{
+
+  &UpCP,
+  0,
+  1,
+  T_INT,
+  /*----------------*/
+  &UnPressLim,
+  -0.1,
+  500.0,
+  T_FLOAT,
+  /*----------------*/
+  &nrmlz_time_up,
+  0,
+  BIG_P,
+  T_INT_L,
+  /*----------------*/
+  &procent_up[FIRST],
+  0.0,
+  100.0,
+  T_FLOAT,
+  /*----------------*/
+  &procent_up[SECOND],
+  0.0,
+  100.0,
+  T_FLOAT,
+  /*----------------*/
+  &procent_up[THIRD],
+  0.0,
+  100.0,
+  T_FLOAT,
+  
+};
+//----------------------
+#endif
+
+//14.06.2021 YN
+#if defined(DENSITY_CONTROL)
 struct dis_set  ds_up[]=
 {
   &allowed_diff[FIRST],
@@ -2481,7 +2520,7 @@ struct dis_set  ds_mka[]=
   10,
   T_INT,
 
-  //14.06.2021 YN
+  //20.08.2021 YN
   #if defined(UNDERPRESSURE)
     &analog_num[2],
     0,
@@ -2492,7 +2531,7 @@ struct dis_set  ds_mka[]=
 };
 //----------------------
 
-  //14.06.2021 YN
+  //20.08.2021 YN
   #if defined(UNDERPRESSURE)
     float ftmp_na[3];
   #else
@@ -2512,7 +2551,7 @@ struct dis_set  ds_na[]=
   BIG_P,
   T_FLOAT,
 
-  //14.06.2021 YN
+  //20.08.2021 YN
   #if defined(UNDERPRESSURE)
     &ftmp_na[2],
     -BIG_P,
@@ -2536,7 +2575,7 @@ struct dis_set  ds_no[]=
   BIG_P,
   T_FLOAT,
 
-  //14.06.2021 YN
+  //20.08.2021 YN
   #if defined(UNDERPRESSURE)
     &analog_offset[2],
     -BIG_P,
@@ -6573,11 +6612,24 @@ m_gp:
 //---------------------------------
 
 //14.06.2021 YN
-#if defined(UNDERPRESSURE)
+#if defined(DENSITY_CONTROL)
       if (!strcmp(intrpr.wrd,"UP" ))
-        { //'UP' allowed underpressure
+        { //'UP' allowed DENSITY_CONTROL
 
           f_dis_set(ds_up,2,8);
+
+          goto fin;
+        }
+#endif
+
+//---------------------------------
+
+//20.08.2021 YN
+#if defined(UNDERPRESSURE)
+      if (!strcmp(intrpr.wrd,"UPCP" ))
+        { //'UPCP' Underpressure control permission
+
+          f_dis_set(ds_upcp,4,6);
 
           goto fin;
         }
@@ -6587,7 +6639,7 @@ m_gp:
       if (!strcmp(intrpr.wrd,"MKA" ))
         {   //'MKA'
 
-          //14.06.2021 YN
+          //20.08.2021 YN
           #if defined(UNDERPRESSURE)
             f_dis_set(ds_mka,3,3);
           #else
@@ -6602,7 +6654,7 @@ m_gp:
           ftmp_na[0]=analog_scale[0]*NA_scale;
           ftmp_na[1]=analog_scale[1]*NA_scale;
 
-          //14.06.2021 YN
+          //20.08.2021 YN
           #if defined(UNDERPRESSURE)
             ftmp_na[2]=analog_scale[2]*NA_scale;
             if(f_dis_set(ds_na,2,3)>0)
@@ -6625,7 +6677,7 @@ m_gp:
       if (!strcmp(intrpr.wrd,"NO" ))
         {   //'NO'
 
-          //14.06.2021 YN
+          //20.08.2021 YN
           #if defined(UNDERPRESSURE)
             f_dis_set(ds_no,2,3);
             if(I7017C[0].status == 0 )

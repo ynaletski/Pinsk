@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.C": "c",
         "I7041.C": "cpp",
         "Dos_win.C": "cpp",
         "OFP_WR.C": "cpp",
@@ -13,6 +14,9 @@
         "DOS_WINW.C": "cpp",
         "DELTA.C": "cpp",
         "TIME_TST.C": "cpp",
-        "ARCH_NFD.C": "cpp"
+        "ARCH_NFD.C": "cpp",
+        "7017C.H": "cpp",
+        "DEVICE.H": "cpp",
+        "MMI.H": "cpp"
     }
 }

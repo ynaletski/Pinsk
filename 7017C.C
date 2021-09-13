@@ -1,7 +1,5 @@
 //14.06.2021 YN 
-#if defined(UNDERPRESSURE)
-
-float Under_Press;                //значение аналогового датчика перед насосом 4-20 ма (МПа)
+#if defined(DENSITY_CONTROL)
 float Dens_new=0.0;
 float Dens_old=0.0;
 float Dens_diff=0.0;              //разность плотностей new и old (кг/м3)
@@ -10,8 +8,28 @@ int permission = 0;               //разрешение на контроль 1-ok
 long nrmlz_time = 5000;           //Время на уменьшение номинального расхода после броска плотности
 float tmpf_nominal = 0.0;         //записывает начальное значение номинального раасхода для возврата значения
 int sw_ctrl_dens=0;               //для switch в avt_ctrl
-unsigned long tmpl_time=0;         //временное время для записи *timeticks
-float procent[3]={90,90,70};       //процент уменьшенного номинала
+unsigned long tmpl_time=0;        //временное время для записи *timeticks
+float procent[3]={50,25,25};      //процент уменьшенного номинала
+//20.08.2021 YN
+#if defined(UNDERPRESSURE)
+  int flag_dens_cntrl = 0;        //если случиться скачок давления отключит для текущего налива контроль разряжения
+#endif
+#endif
+
+//20.08.2021 YN 
+#if defined(UNDERPRESSURE)
+int UpCP = 0;                     //Underpressure Control Permission
+float Under_Press;                //значение аналогового датчика перед насосом (МПа)
+float UnPressLim = -0.045;        //Значение не допустимого разряжения МПа 
+long nrmlz_time_up = 5000;        //Время на уменьшение номинального расхода после разряжения
+float tmpf_nominal_up = 0.0;      //записывает начальное значение номинального раасхода для возврата значения
+int sw_ctrl_up=0;                 //для switch в avt_ctrl
+unsigned long tmpl_time_up=0;     //временное время для записи *timeticks
+float procent_up[3]={50,25,25};   //процент уменьшенного номинала
+//14.06.2021 YN
+#if defined(DENSITY_CONTROL)
+  int flag_underpressure = 0;     //если разряжение превысит допустимое отключит для текущего налива контроль плотности
+#endif
 #endif
 
 #define ICP_7017C
@@ -237,7 +255,7 @@ m1:
              }
            }
 
-          //14.06.2021 YN
+          //20.08.2021 YN
           #if defined(UNDERPRESSURE)
             itmp=analog_num[2]-1;
             if(itmp>= 0)

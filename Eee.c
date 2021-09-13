@@ -540,15 +540,27 @@ struct eee_dat EE_Dat[]=
 &fict_ftmp,sizeof( fict_ftmp ),
 &fict_ftmp,sizeof( fict_ftmp ),
 &fict_ftmp,sizeof( fict_ftmp ),
-&fict_ftmp,sizeof( fict_ftmp ),
-&fict_ftmp,sizeof( fict_ftmp ),
-&fict_ftmp,sizeof( fict_ftmp ),
-&fict_ftmp,sizeof( fict_ftmp ),
-&fict_ftmp,sizeof( fict_ftmp ),
-&fict_ftmp,sizeof( fict_ftmp ),
+
+//20.08.2021 YN
+#if defined(UNDERPRESSURE)
+  &UpCP,sizeof( UpCP ),
+  &fict_itmp,sizeof( fict_itmp ),
+  &UnPressLim,sizeof( UnPressLim ),
+  &procent_up[FIRST]            ,sizeof(procent_up[FIRST]       ),
+  &procent_up[SECOND]            ,sizeof(procent_up[SECOND]       ),
+  &procent_up[THIRD]            ,sizeof(procent_up[THIRD]       ),
+  &nrmlz_time_up                ,sizeof(nrmlz_time_up       ),
+#else
+  &fict_ftmp,sizeof( fict_ftmp ),
+  &fict_ftmp,sizeof( fict_ftmp ),
+  &fict_ftmp,sizeof( fict_ftmp ),
+  &fict_ftmp,sizeof( fict_ftmp ),
+  &fict_ftmp,sizeof( fict_ftmp ),
+  &fict_ftmp,sizeof( fict_ftmp ),
+#endif
 
 //14.06.2021 YN
-#if defined(UNDERPRESSURE)
+#if defined(DENSITY_CONTROL)
   &procent[FIRST]            ,sizeof(procent[FIRST]       ),
   &procent[SECOND]            ,sizeof(procent[SECOND]       ),
   &procent[THIRD]            ,sizeof(procent[THIRD]       ), 
@@ -556,11 +568,7 @@ struct eee_dat EE_Dat[]=
   &allowed_diff[FIRST]       ,sizeof(allowed_diff[FIRST]      ), 
   &allowed_diff[SECOND]      ,sizeof(allowed_diff[SECOND]     ),
   &allowed_diff[THIRD]       ,sizeof(allowed_diff[THIRD]      ),
-  &analog_scale[2]           ,sizeof(analog_scale[0]  ),
-  &analog_offset[2]          ,sizeof(analog_offset[0] ),
 #else
-  &fict_ftmp,sizeof( fict_ftmp ),
-  &fict_ftmp,sizeof( fict_ftmp ),
   &fict_ftmp,sizeof( fict_ftmp ),
   &fict_ftmp,sizeof( fict_ftmp ),
   &fict_ftmp,sizeof( fict_ftmp ),
@@ -572,12 +580,23 @@ struct eee_dat EE_Dat[]=
 
 //&n_dat_et[0]   ,sizeof( n_dat_et),
 
-//14.06.2021 YN
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
+  &analog_scale[2]           ,sizeof(analog_scale[0]  ),
+  &analog_offset[2]          ,sizeof(analog_offset[0] ),
+
   &analog_num[2]      ,sizeof(analog_num[0]    ),
+#else
+  &fict_ftmp,sizeof( fict_ftmp ),
+  &fict_ftmp,sizeof( fict_ftmp ),
+
+  &fict_itmp,sizeof( fict_itmp ),
+#endif
+
+//14.06.2021 YN
+#if defined(DENSITY_CONTROL)
   &permission      ,sizeof(permission          ),
 #else
-  &fict_itmp,sizeof( fict_itmp ),
   &fict_itmp,sizeof( fict_itmp ),
 #endif
 

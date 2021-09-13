@@ -13,8 +13,11 @@
 //  Если MDI == 1 , в функции тока двигателя
 // изменяется верхний предел частоты вращения двигателя.
 
-//14.06.2021 YN
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
+char sw_ver[20]="N4.11 20 Aug 2021 ";  // COM0 COM1 COM2 COM3 COM4
+//14.06.2021 YN
+#elif defined(DENSITY_CONTROL)
 char sw_ver[20]="N4.10 03 May 2021 ";  // COM0 COM1 COM2 COM3 COM4
 #else
 char sw_ver[20]="N5 14 Jun 2021 ";  // COM0 COM1 COM2 COM3 COM4
@@ -593,9 +596,14 @@ void main(void)
      s_MVD[0].Press= analog_offset[0];
      s_MVD[0].TempR= analog_offset[1];
 
-    //14.06.2021 YN
+    //20.08.2021 YN
     #if defined(UNDERPRESSURE)
       Under_Press= analog_offset[2];
+      UpCP = 0;
+    #endif
+
+    //14.06.2021 YN
+    #if defined(DENSITY_CONTROL)
       permission=0;
     #endif
   }
@@ -772,7 +780,7 @@ void f_empty(int ii)
 /* ---------------------------------------- */
 /*================================================================*/
 
-//14.06.2021 YN
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
   float ftmp_naMMI[3];
 #else
@@ -864,14 +872,25 @@ struct dis_set_MMI ds_list1[]=
   BIG_P,
   T_FLOAT,
 
-  //14.06.2021 YN
-  #if defined(UNDERPRESSURE)
-    list1_dsr,
-    167,
-    &ftmp_naMMI[2],
-    -BIG_P,
-    BIG_P,
-    T_FLOAT,
+  //20.08.2021 YN
+  #if defined(DENSITY_CONTROL)
+    #if defined(UNDERPRESSURE)
+      list1_dsr,
+      175,
+      &ftmp_naMMI[2],
+      -BIG_P,
+      BIG_P,
+      T_FLOAT,
+    #endif
+  #else
+    #if defined(UNDERPRESSURE)
+      list1_dsr,
+      167,
+      &ftmp_naMMI[2],
+      -BIG_P,
+      BIG_P,
+      T_FLOAT,
+    #endif
   #endif
 
 //-----------
@@ -889,14 +908,25 @@ struct dis_set_MMI ds_list1[]=
   BIG_P,
   T_FLOAT,
 
-  //14.06.2021 YN
-  #if defined(UNDERPRESSURE)
-    list1_dsr,
-    168,
-    &analog_offset[2],
-    -BIG_P,
-    BIG_P,
-    T_FLOAT,
+  //20.08.2021 YN
+  #if defined(DENSITY_CONTROL)
+    #if defined(UNDERPRESSURE)
+      list1_dsr,
+      176,
+      &analog_offset[2],
+      -BIG_P,
+      BIG_P,
+      T_FLOAT,
+    #endif
+  #else
+    #if defined(UNDERPRESSURE)
+      list1_dsr,
+      168,
+      &analog_offset[2],
+      -BIG_P,
+      BIG_P,
+      T_FLOAT,
+    #endif
   #endif
 
 /*----------------*/
@@ -1073,14 +1103,25 @@ struct dis_set_MMI ds_list1[]=
   8,
   T_INT,
 
-  //14.06.2021 YN
-  #if defined(UNDERPRESSURE)
-    list1_dsr,
-    166,               // Разряж. N анлг.вх
-    &analog_num[2],
-    0,
-    8,
-    T_INT,
+  //20.08.2021 YN
+  #if defined(DENSITY_CONTROL)
+    #if defined(UNDERPRESSURE)
+      list1_dsr,
+      174,               // Разряж. N анлг.вх
+      &analog_num[2],
+      0,
+      8,
+      T_INT,
+    #endif
+  #else
+    #if defined(UNDERPRESSURE)
+      list1_dsr,
+      166,               // Разряж. N анлг.вх
+      &analog_num[2],
+      0,
+      8,
+      T_INT,
+    #endif
   #endif
 
 //-----------
@@ -1436,62 +1477,154 @@ struct dis_set_MMI ds_list1[]=
 //-----------
 
   //14.06.2021 YN
-  #if defined(UNDERPRESSURE)
+  #if defined(DENSITY_CONTROL)
     list1_dsr,
-    169,
+    166,
     &allowed_diff[FIRST],
     0.0,
     500.0,
     T_FLOAT,
     //-----------
     list1_dsr,
-    170,
+    167,
     &allowed_diff[SECOND],
     0.0,
     500.0,
     T_FLOAT,
     //-----------
     list1_dsr,
-    171,
+    168,
     &allowed_diff[THIRD],
     0.0,
     500.0,
     T_FLOAT,
     //-----------
     list1_dsr,
-    172,
+    169,
     &permission,
     0,
     1,
     T_INT,
     //-----------
     list1_dsr,
-    173,
+    170,
     &nrmlz_time,
     0,
     BIG_P,
     T_INT_L,
     //-----------
     list1_dsr,
-    174,
+    171,
     &procent[FIRST],
     0.0,
     100.0,
     T_FLOAT,
     //-----------
     list1_dsr,
-    175,
+    172,
     &procent[SECOND],
     0.0,
     100.0,
     T_FLOAT,
     //-----------
-      list1_dsr,
-    176,
+    list1_dsr,
+    173,
     &procent[THIRD],
     0.0,
     100.0,
     T_FLOAT,
+
+    //20.08.2021 YN
+    #if defined(UNDERPRESSURE)
+      //-----------
+      list1_dsr,  //Underpressure Control permission
+      177,
+      &UpCP,
+      0,
+      1,
+      T_INT,
+      //-----------
+      list1_dsr,
+      178,
+      &UnPressLim,
+      -0.1,
+      500.0,
+      T_FLOAT,
+      //-----------
+      list1_dsr,
+      179,
+      &nrmlz_time_up,
+      0,
+      BIG_P,
+      T_INT_L,
+      //-----------
+      list1_dsr,
+      180,
+      &procent_up[FIRST],
+      0.0,
+      100.0,
+      T_FLOAT,
+      //-----------
+      list1_dsr,
+      181,
+      &procent_up[SECOND],
+      0.0,
+      100.0,
+      T_FLOAT,
+      //-----------
+      list1_dsr,
+      182,
+      &procent_up[THIRD],
+      0.0,
+      100.0,
+      T_FLOAT,
+    #endif
+  #else
+    //20.08.2021 YN
+    #if defined(UNDERPRESSURE)
+      //-----------
+      list1_dsr,
+      169,
+      &UpCP,
+      0,
+      1,
+      T_INT,
+      //-----------
+      list1_dsr,
+      170,
+      &UnPressLim,
+      -0.1,
+      500.0,
+      T_FLOAT,
+      //-----------
+      list1_dsr,
+      171,
+      &nrmlz_time_up,
+      0,
+      BIG_P,
+      T_INT_L,
+      //-----------
+      list1_dsr,
+      172,
+      &procent_up[FIRST],
+      0.0,
+      100.0,
+      T_FLOAT,
+      //-----------
+      list1_dsr,
+      173,
+      &procent_up[SECOND],
+      0.0,
+      100.0,
+      T_FLOAT,
+      //-----------
+      list1_dsr,
+      174,
+      &procent_up[THIRD],
+      0.0,
+      100.0,
+      T_FLOAT,
+    #endif
   #endif
 
 //-----------

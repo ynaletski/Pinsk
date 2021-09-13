@@ -26,8 +26,7 @@ extern float P_inp;
 #define SECOND 1
 #define THIRD  2
 #define FOURTH 3
-#if defined(UNDERPRESSURE)
-extern float Under_Press;
+#if defined(DENSITY_CONTROL)
 extern float Dens_new;
 extern float Dens_old;
 extern float Dens_diff;
@@ -38,4 +37,24 @@ extern float tmpf_nominal;
 extern int sw_ctrl_dens;
 extern unsigned long tmpl_time;
 extern float procent[3];
+  //20.08.2021 YN
+  #if defined(UNDERPRESSURE)
+  extern int flag_dens_cntrl;
+  #endif
+#endif
+
+//20.08.2021 YN
+#if defined(UNDERPRESSURE)
+extern int UpCP;
+extern float Under_Press;
+extern float UnPressLim;
+extern long nrmlz_time_up;
+extern float tmpf_nominal_up;
+extern int sw_ctrl_up;
+extern unsigned long tmpl_time_up;
+extern float procent_up[3];
+  //14.06.2021 YN
+  #if defined(DENSITY_CONTROL)
+  extern int flag_underpressure;
+  #endif
 #endif

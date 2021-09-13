@@ -521,7 +521,7 @@ void main(void)
      s_MVD[0].TempR= analog_offset[1];
 
     //14.06.2021 YN
-    #if defined(UNDERPRESSURE)
+    #if defined(DENSITY_CONTROL)
       Under_Press= analog_offset[2];
     #endif
 
@@ -693,7 +693,7 @@ void f_empty(int ii)
 /*================================================================*/
 
 //14.06.2021 YN
-#if defined(UNDERPRESSURE)
+#if defined(DENSITY_CONTROL)
   float ftmp_naMMI[3];
 #else
   float ftmp_naMMI[2];
@@ -787,7 +787,7 @@ struct dis_set_MMI ds_list1[]=
   T_FLOAT,
 
   //14.06.2021 YN
-  #if defined(UNDERPRESSURE)
+  #if defined(DENSITY_CONTROL)
     list1_dsr,
     167,
     &ftmp_naMMI[2],
@@ -812,7 +812,7 @@ struct dis_set_MMI ds_list1[]=
   T_FLOAT,
 
   //14.06.2021 YN
-  #if defined(UNDERPRESSURE)
+  #if defined(DENSITY_CONTROL)
     list1_dsr,
     168,
     &analog_offset[2],
@@ -977,7 +977,7 @@ struct dis_set_MMI ds_list1[]=
   T_INT,
 
   //14.06.2021 YN
-  #if defined(UNDERPRESSURE)
+  #if defined(DENSITY_CONTROL)
     list1_dsr,
     166,               // Разряж. N анлг.вх
     &analog_num[2],

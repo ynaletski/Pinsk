@@ -246,7 +246,7 @@ int (*f_Drive_Rn_chk)()=f_Rn_chk_fict;
 void (*f_Drive_Stop)()=f_fict_stop;
 void (*f_Drive_Run)()=f_fict_run;
 
-//14.06.2021 YN
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
 //             температура
 //          давление |  разряжение
@@ -334,8 +334,12 @@ char list_avt[][32]={
 "       ID не корректен        ",//34
 "       по команде Host        ",//35
 //14.06.2021 YN
+#if defined(DENSITY_CONTROL)
+" Ошибка контроля плотности    ",//36
+#endif
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
-" Ошибка подачи нефтепродукта  ",//36
+" Ошибка контроля разряжения   ",//37 //36
 #endif
 };
 
@@ -836,12 +840,30 @@ m_err_mvd:
       sw_dlv_liq=12;
 
       //14.06.2021 YN
-      #if defined(UNDERPRESSURE)
+      #if defined(DENSITY_CONTROL)
          if(permission)
          {
             sw_ctrl_dens = FIRST;
             Dens_new=Dens_old=Dens_diff=tmpf_nominal=0.0;
             tmpl_time=0;
+            //20.08.2021 YN
+            #if defined(UNDERPRESSURE)
+               flag_dens_cntrl = 0;
+            #endif
+         }
+      #endif
+
+      //20.08.2021 YN
+      #if defined(UNDERPRESSURE)
+         if(UpCP)
+         {
+            sw_ctrl_up = FIRST;
+            tmpf_nominal_up=0.0;
+            tmpl_time_up=0;
+            //14.06.2021 YN
+            #if defined(DENSITY_CONTROL)
+               flag_underpressure = 0;
+            #endif
          }
       #endif
 
@@ -853,91 +875,199 @@ m_err_mvd:
    case  12:
        //  отпуск
 
-   //14.06.2021 YN
+   //20.08.2021 YN
    #if defined(UNDERPRESSURE)
+      //14.06.2021 YN
+      #if defined(DENSITY_CONTROL)
+         if(flag_dens_cntrl != 0) goto fdc;                          //пропускаем функцию
+      #endif
+      if(UpCP)                                                       // Если включен контроль разряжения 'UP' p4=1 (Underpressure Control Permission)
+      {
+         if( Flow_dem == Flow_nom || Flow_dem == Flow_nomL)          //когда начинаем или вышли на номинальный расход
+         {
+            switch (sw_ctrl_up)
+            {
+               case FIRST:
+                  if(Under_Press < UnPressLim)                      //разряжение на трубе превышает допустимое
+                  {
+                     MmiGotoxy(0,1); MmiPuts("  Сработал контр.разряж. 1   ");
+                     //14.06.2021 YN
+                     #if defined(DENSITY_CONTROL)
+                        flag_underpressure = 1;                     //флаг для пропуска контроля плотности для текущего налива
+                     #endif
+                      sw_ctrl_up= SECOND;                           //устанавливаем второй проход
+                     if( Flag_Low == 0)
+                     {
+                        tmpf_nominal_up = Flow_nom;                //сохраняем начальное значение номинала для последующего восстановления
+                        if((Flow_nom*procent[FIRST]/100) < (Flow_min1 + 3000)) Flow_nom = Flow_min1 + 3000;
+                        else Flow_nom = Flow_nom*procent_up[FIRST]/100; //уменьшаем номинал на значение 'UPCP' p.4
+                     }
+                     else
+                     {  //Flag_Low != 0
+                        tmpf_nominal_up= Flow_nomL;                  //сохраняем начальное значение номинала для последующего восстановления
+                        if((Flow_nomL*procent[FIRST]/100) < (Flow_min1L + 3000)) Flow_nomL = Flow_min1L + 3000;
+                        else Flow_nomL= Flow_nomL*procent_up[FIRST]/100;  //уменьшаем номинал на значение 'UPCP' p.4
+                     }
+                     tmpl_time_up= TimeStamp;
+                  }
+               break;
+            
+               case SECOND:
+                  if( f_timer(tmpl_time_up,nrmlz_time_up ) )      //ожидаем 'UPCP' p3 секунд, для выхода на новый расход
+                  {
+                     if(Under_Press < UnPressLim)                 //разряжение на трубе превышает допустимое
+                     {
+                        MmiGotoxy(0,1); MmiPuts("  Сработал контр.разряж. 2   ");
+                        sw_ctrl_up= THIRD;                      //устанавливаем третий проход
+                        if( Flag_Low == 0)
+                        {
+                           if((Flow_nom*procent[SECOND]/100) < (Flow_min1 + 3000)) Flow_nom = Flow_min1 + 3000;
+                           else Flow_nom= Flow_nom*procent_up[SECOND]/100;   //уменьшаем номинал на значение 'UPCP' p.5
+                        }
+                        else
+                        {  //Flag_Low != 0
+                           if((Flow_nomL*procent[SECOND]/100) < (Flow_min1L + 3000)) Flow_nomL = Flow_min1L + 3000;
+                           else Flow_nomL= Flow_nomL*procent_up[SECOND]/100; //уменьшаем номинал на значение 'UPCP' p.5
+                        }
+                        tmpl_time_up= TimeStamp;
+                     }
+                  }
+               break;
+
+               case THIRD:
+                  if( f_timer(tmpl_time_up,nrmlz_time_up ) )            //ожидаем 'UPCP' p3 секунд, для выхода на новый расход
+                  {
+                     if(Under_Press < UnPressLim)                       //разряжение на трубе превышает допустимое
+                     {
+                        MmiGotoxy(0,1); MmiPuts("  Сработал контр.разряж. 3   ");
+                        sw_ctrl_up= FOURTH;                             //устанавливаем четвертый проход
+                        if( Flag_Low == 0)
+                        {
+                           if((Flow_nom*procent[THIRD]/100) < (Flow_min1 + 3000)) Flow_nom = Flow_min1 + 3000;
+                           else Flow_nom= Flow_nom*procent_up[THIRD]/100;    //уменьшаем номинал на значение 'UPCP' p.6
+                        }
+                        else
+                        {  //Flag_Low != 0
+                           if((Flow_nomL*procent[THIRD]/100) < (Flow_min1L + 3000)) Flow_nomL = Flow_min1L + 3000;
+                           else Flow_nomL= Flow_nomL*procent_up[THIRD]/100;  //уменьшаем номинал на значение 'UPCP' p.6
+                        }
+                        tmpl_time_up= TimeStamp;
+                     }
+                  }
+               break;
+
+               case FOURTH:
+                  if( f_timer(tmpl_time_up,nrmlz_time_up ) )      //ожидаем 'UPCP' p3 секунд, для выхода на новый расход
+                  {
+                     if(Under_Press < UnPressLim)                 //разряжение на трубе превышает допустимое
+                     {
+                        MmiGotoxy(0,1); MmiPuts("  Сработал контр.разряж. 4   ");
+                        key=UND_PRESS;
+                     }
+                  }
+               break;
+            }
+         }
+      }
+      //14.06.2021 YN
+      #if defined(DENSITY_CONTROL)
+         fdc:
+      #endif
+   #endif
+
+  //14.06.2021 YN
+   #if defined(DENSITY_CONTROL)
+      //20.08.2021 YN 
+      #if defined(UNDERPRESSURE)
+         if(flag_underpressure != 0) goto fup; //пропускаем функцию
+      #endif   
       if(permission)    // Если включен контроль плотности 'UP' p4=1
       {
          if( Flow_dem == Flow_nom || Flow_dem == Flow_nomL) //когда начинаем или вышли на номинальный расход
          {
             Dens_new= s_MVD[0].Dens;
-
             if( Dens_old > 0.0 )
                if(Dens_new > Dens_old)
                {
                   Dens_diff= Dens_new - Dens_old;
-
                   switch (sw_ctrl_dens)
                   {
                      case FIRST:
-                        if(Dens_diff > allowed_diff[FIRST])   //разница давлений превышает разрешенную[FIRST] (первый проход) 'UP' p1
-                        {                                            
+                        if(Dens_diff > allowed_diff[FIRST])   //разница плотностей превышает разрешенную[FIRST] (первый проход) 'UP' p1
+                        {                                
+                           MmiGotoxy(0,1); MmiPuts("  Сработал контр.плотн. 1   ");
+                           //20.08.2021 YN
+                           #if defined(UNDERPRESSURE)
+                              flag_dens_cntrl = 1;            //флаг для пропуска контроля разряжения для текущего налива
+                           #endif
                            sw_ctrl_dens= SECOND;              //устанавливаем второй проход
-
                            if( Flag_Low == 0)
                            {
                               tmpf_nominal= Flow_nom;                //сохраняем начальное значение номинала для последующего восстановления
-                              Flow_nom= Flow_nom*procent[FIRST]/100; //уменьшаем номинал на значение 'UP' p.6
+                              if((Flow_nom*procent[FIRST]/100) < (Flow_min1 + 3000)) Flow_nom = Flow_min1 + 3000;
+                              else Flow_nom= Flow_nom*procent[FIRST]/100; //уменьшаем номинал на значение 'UP' p.6
                            }
                            else
                            {  //Flag_Low != 0
                               tmpf_nominal= Flow_nomL;                  //сохраняем начальное значение номинала для последующего восстановления
-                              Flow_nomL= Flow_nomL*procent[FIRST]/100;  //уменьшаем номинал на значение 'UP' p.6
+                              if((Flow_nomL*procent[FIRST]/100) < (Flow_min1L + 3000)) Flow_nomL = Flow_min1L + 3000;
+                              else Flow_nomL= Flow_nomL*procent[FIRST]/100;  //уменьшаем номинал на значение 'UP' p.6
                            }
                            tmpl_time= TimeStamp;
                         }
                      break;
 
                      case SECOND:
-                        if( f_timer(tmpl_time,nrmlz_time ) )            //ожидаем 'UP p5 секунд, для выхода на новый расход
+                        if( f_timer(tmpl_time,nrmlz_time ) )            //ожидаем 'UP' p5 секунд, для выхода на новый расход
                         {
-                           if(Dens_diff > allowed_diff[SECOND]) //разница давлений превышает разрешенную[SECOND] (первый проход) 'UP' p2
+                           if(Dens_diff > allowed_diff[SECOND]) //разница плотностей превышает разрешенную[SECOND] (первый проход) 'UP' p2
                            {
+                              MmiGotoxy(0,1); MmiPuts("  Сработал контр.плотн. 2   ");
                               sw_ctrl_dens= THIRD;                //устанавливаем третий проход
-
                               if( Flag_Low == 0)
                               {
-                                 Flow_nom= Flow_nom*procent[SECOND]/100;   //уменьшаем номинал на значение 'UP' p.7
+                                 if((Flow_nom*procent[SECOND]/100) < (Flow_min1 + 3000)) Flow_nom = Flow_min1 + 3000;
+                                 else Flow_nom= Flow_nom*procent[SECOND]/100;   //уменьшаем номинал на значение 'UP' p.7
                               }
                               else
                               {  //Flag_Low != 0
-                                 Flow_nomL= Flow_nomL*procent[SECOND]/100; //уменьшаем номинал на значение 'UP' p.7
+                                 if((Flow_nomL*procent[SECOND]/100) < (Flow_min1L + 3000)) Flow_nomL = Flow_min1L + 3000;
+                                 else Flow_nomL= Flow_nomL*procent[SECOND]/100; //уменьшаем номинал на значение 'UP' p.7
                               }
-
                               tmpl_time= TimeStamp;
                            }
                         }
                      break;
 
                      case THIRD:
-                        if( f_timer(tmpl_time,nrmlz_time) )          //ожидаем 'UP p5 секунд, для выхода на новый расход
+                        if( f_timer(tmpl_time,nrmlz_time) )          //ожидаем 'UP' p5 секунд, для выхода на новый расход
                         {
-                           if(Dens_diff > allowed_diff[THIRD]) //разница давлений превышает разрешенную[THIRD] (первый проход) 'UP' p3
+                           if(Dens_diff > allowed_diff[THIRD]) //разница плотностей превышает разрешенную[THIRD] (первый проход) 'UP' p3
                            {
+                              MmiGotoxy(0,1); MmiPuts("  Сработал контр.плотн. 3   ");
                               sw_ctrl_dens= FOURTH;               //устанавливаем четвертый проход
-
                               if( Flag_Low == 0)
                               {
-                                 Flow_nom= Flow_nom*procent[THIRD]/100;    //уменьшаем номинал на значение 'UP' p.8
+                                 if((Flow_nom*procent[THIRD]/100) < (Flow_min1 + 3000)) Flow_nom = Flow_min1 + 3000;
+                                 else Flow_nom= Flow_nom*procent[THIRD]/100;    //уменьшаем номинал на значение 'UP' p.8
                               }
                               else
                               {  //Flag_Low != 0
-                                 Flow_nomL= Flow_nomL*procent[THIRD]/100;  //уменьшаем номинал на значение 'UP' p.8
+                                 if((Flow_nomL*procent[THIRD]/100) < (Flow_min1L + 3000)) Flow_nomL = Flow_min1L + 3000;
+                                 else Flow_nomL= Flow_nomL*procent[THIRD]/100;  //уменьшаем номинал на значение 'UP' p.8
                               }
-
                               tmpl_time= TimeStamp;
                            }
                         }
                      break;
 
                      case FOURTH:
-                        if( f_timer(tmpl_time,nrmlz_time) )       //ожидаем 'UP p5 секунд, для выхода на новый расход
+                        if( f_timer(tmpl_time,nrmlz_time) )       //ожидаем 'UP' p5 секунд, для выхода на новый расход
                         {
-                           if(Dens_diff > allowed_diff[THIRD]) //разница давлений превышает разрешенную[THIRD] (первый проход) 'UP' p3
+                           if(Dens_diff > allowed_diff[THIRD]) //разница плотностей превышает разрешенную[THIRD] (первый проход) 'UP' p3
                            {
-                              key__1=UND_PRESS;
-                              result_dlv=0; //  Ошибка без возможности продолжить
-                              sw_dlv_liq=30; 
-                              f_reg_cmn(13);
+                              MmiGotoxy(0,1); MmiPuts("  Сработал контр.плотн. 4   ");
+                              key=DENSCONTROL;
                            }
                         }
                      break;
@@ -947,11 +1077,28 @@ m_err_mvd:
             Dens_old= s_MVD[0].Dens;
          }
       }
-
+      //20.08.2021 YN
+      #if defined(UNDERPRESSURE)
+         fup:
+      #endif
    #endif
 
 
+   if(key==UND_PRESS)
+   {
+      key__1=UND_PRESS;
+      result_dlv=0;                             //Ошибка без возможности продолжить
+      sw_dlv_liq=30; 
+      f_reg_cmn(13);
+   }
 
+      if(key==DENSCONTROL)
+   {
+      key__1=DENSCONTROL;
+      result_dlv=0;                             //Ошибка без возможности продолжить
+      sw_dlv_liq=30; 
+      f_reg_cmn(13);
+   }
 
     if(FL_err)    // переход к процедуре отключения
     {
@@ -1002,7 +1149,7 @@ m_err_mvd:
 */
 
 //14.06.2021 YN
-#if defined(UNDERPRESSURE)
+#if defined(DENSITY_CONTROL)
    if( tmpf_nominal != 0.0 )
    {
       if( Flag_Low == 0)
@@ -1014,6 +1161,23 @@ m_err_mvd:
       {  //Flag_Low != 0
          Flow_nomL= tmpf_nominal;
          tmpf_nominal=0.0;
+      }
+   }
+#endif
+
+//20.08.2021 YN
+#if defined(UNDERPRESSURE)
+   if( tmpf_nominal_up != 0.0 )
+   {
+      if( Flag_Low == 0)
+      {
+         Flow_nom= tmpf_nominal_up;
+         tmpf_nominal_up=0.0;
+      }
+      else
+      {  //Flag_Low != 0
+         Flow_nomL= tmpf_nominal_up;
+         tmpf_nominal_up=0.0;
       }
    }
 #endif
@@ -1182,12 +1346,31 @@ m_mot_not:
        }
 
        //14.06.2021 YN
-       #if defined(UNDERPRESSURE)
-         else if(key__1== STOP_E)
+       #if defined(DENSITY_CONTROL)
+         else if(key__1== DENSCONTROL)
          {
             f_reg_cmn(13);
             MmiGotoxy(0,0);   MmiPuts(list_avt[30]);  //" Отпуск остановлен            ",//30
-            MmiGotoxy(0,1);   MmiPuts(list_avt[36]);  //" Ошибка подачи нефтепродукта  ",//36
+            MmiGotoxy(0,1);   MmiPuts(list_avt[36]);  //" Ошибка контроля плотности    ",//36
+            MmiGotoxy(0,6);   MmiPuts(list_avt[28]);  //" ESC - меню                   ",//28
+        break;
+       }
+       #endif
+
+       //20.08.2021 YN
+       #if defined(UNDERPRESSURE)
+         else if(key__1== UND_PRESS)
+         {
+            f_reg_cmn(13);
+            MmiGotoxy(0,0);   MmiPuts(list_avt[30]);  //" Отпуск остановлен            ",//30
+
+            //14.06.2021 YN
+            #if defined(DENSITY_CONTROL)            
+               MmiGotoxy(0,1);   MmiPuts(list_avt[37]);  //" Ошибка контроля разряжения   ",//37
+            #else
+               MmiGotoxy(0,1);   MmiPuts(list_avt[36]);  //" Ошибка контроля разряжения   ",//36
+            #endif
+
             MmiGotoxy(0,6);   MmiPuts(list_avt[28]);  //" ESC - меню                   ",//28
         break;
        }
@@ -1341,6 +1524,10 @@ void f_alarm()
    fl_GO=0;
    TimeOut3=TimeStamp-Out3_delay_off;
 }
+
+//09.09.2021 YN
+int fl_GO_t=0;
+
 //-----------------------------
 void f_sens()
 { // проверяет состояние кнопки ES и UZA при отпуске/приеме СУГ
@@ -1351,7 +1538,15 @@ void f_sens()
 
 //  i7060_out[0] = itmp;
 
-  if( (fl_GO | fl_EQ) != 0)
+   //09.09.2021 YN
+   //was:  if( (fl_GO | fl_EQ) != 0)
+         //{
+   //now:
+  if(( fl_GO == 0) && ( fl_GO_t == 0) )
+  {
+ 
+  }
+  else if( (fl_GO | fl_EQ) != 0)
   {
 
    if( Flag_Low == 0)

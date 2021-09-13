@@ -2423,20 +2423,33 @@ char *list1_dsr[]={
 "Масса 3,кг  ",            // 163
 "Расх.3,кг/ч. ",           // 164
 "Тип нефтепродукта",       // 165
+
 //14.06.2021 YN
-#if defined(UNDERPRESSURE)
-"Разряж.  N анлг.вх",      //166
-"Разряж. шкала, МПа",      //167
-"Разряж. смеще. МПа",      //168
-"Допуст.ошибка N1  ",      //169
-"Допуст.ошибка N2  ",      //170
-"Допуст.ошибка N3  ",      //171 
-"Контроль разряж.  ",      //172
-"Время ожидания    ",      //173
-"Процент замедл N1 ",      //174
-"Процент замедл N2 ",      //175
-"Процент замедл N3 ",      //176
+#if defined(DENSITY_CONTROL)
+"Допуст.ошибка N1  ",      //166
+"Допуст.ошибка N2  ",      //167
+"Допуст.ошибка N3  ",      //168
+"Контроль плотн-ти ",      //169
+"Время ожидания    ",      //170
+"Процент замедл N1 ",      //171
+"Процент замедл N2 ",      //172
+"Процент замедл N3 ",      //173
 #endif
+
+//20.08.2021 YN
+#if defined(UNDERPRESSURE)
+"Разряж.  N анлг.вх",      //166    //174
+"Разряж. шкала, МПа",      //167    //175
+"Разряж. смеще. МПа",      //168    //176
+"Контроль разряж.  ",      //169    //177
+"Макс.допуст.разр. ",      //170    //178
+"Время ожидания up ",      //171    //179
+"Умен.ном.расх.N1% ",      //172    //180 
+"Умен.ном.расх.N2% ",      //173    //181
+"Умен.ном.расх.N3% ",      //174    //182
+
+#endif
+
 "",
 };
 //-------------------------------
@@ -5177,7 +5190,7 @@ m220:
      else
        MmiPuts("0");
 
-      //14.06.2021 YN
+      //20.08.2021 YN
       #if defined(UNDERPRESSURE)
         MmiGotoxy(10,4); MmiPuts("СТОП.В=");
         //   if( STOP_IN)
@@ -5667,7 +5680,7 @@ m_m5_1d:
           if(flag_prn_mass)   MmiPrintf("М=%9.2f кг |О= %9.2f л  ",s_MVD[0].MassT,s_MVD[0].VolT);  // VolT_id, VolT_int
           else                MmiPrintf("М=%9.2f кг |О= %9.2f л  ",(float)0.,(float)0.);  // VolT_id, VolT_int
 
-          //14.06.2021 YN
+          //20.08.2021 YN
           #if defined(UNDERPRESSURE)
           MmiGotoxy(16,6);
           if (Under_Press < 0){
@@ -5840,7 +5853,7 @@ void f_before_MMI()
     ftmp_naMMI[0]=analog_scale[0]*NA_scale;
     ftmp_naMMI[1]=analog_scale[1]*NA_scale;
 
-    //14.06.2021 YN
+    //20.08.2021 YN
     #if defined(UNDERPRESSURE)
       ftmp_naMMI[2]=analog_scale[2]*NA_scale;
     #endif
@@ -5859,7 +5872,7 @@ int i;
     analog_scale[0]=ftmp_naMMI[0]/NA_scale;
     analog_scale[1]=ftmp_naMMI[1]/NA_scale;
 
-    //14.06.2021 YN
+    //20.08.2021 YN
     #if defined(UNDERPRESSURE)
       analog_scale[2]=ftmp_naMMI[2]/NA_scale;
     #endif

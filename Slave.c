@@ -338,7 +338,7 @@ float *list_Slv_flt[]={
 #endif
 &s_MVD[0].PressG,    // 36 F1072
 
-//14.06.2021 YN
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
   &Under_Press,     // 37 F1074 Разряжение перед насосом МПа
 #endif

@@ -22,6 +22,11 @@ extern int  MMI_out_err;
 #define ESC  'Q'
 
 //14.06.2021 YN
+#if defined(DENSITY_CONTROL)
+#define DENSCONTROL 'D'
+#endif
+
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
 #define UND_PRESS 'U'
 #endif
@@ -213,7 +218,7 @@ extern int un_mmi3;
 extern char *list_un_mmi[];
 extern float vBIG_P;
 
-//14.06.2021 YN
+//20.08.2021 YN
 #if defined(UNDERPRESSURE)
 extern float ftmp_naMMI[3];
 #else

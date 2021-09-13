@@ -193,4 +193,6 @@ void f_out();
 extern int en_bot[];
 
 extern int result_dlv;
-
+
+//09.09.2021 YN 
+extern int fl_GO_t;

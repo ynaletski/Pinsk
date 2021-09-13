@@ -12,5 +12,8 @@
 //#define EKD_800
 #define RTU_OFP
 
-//14.06.2021 YN
-#define UNDERPRESSURE
+//14.06.2021 YN           //контроль плотности при наливе
+#define DENSITY_CONTROL     //для отключения закоментировать
+
+//20.08.2021 YN           //контроль разряжения при наливе
+#define UNDERPRESSURE       //для отключения закоментировать

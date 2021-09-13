@@ -2739,6 +2739,10 @@ else
 
   flag_nal=1;
   fl_GO=1;
+
+  //09.09.2021 YN
+  fl_GO_t=1;
+
   flag_pool=1;
   flag_O0=1;
   flag_O1=1;
@@ -2818,7 +2822,8 @@ float ftmp;
 
   if((MVD_fn[0] != 0) && (MVD_fn[0] != F_FAULT))
   {
-      if( f_timer(t_prep_MVD,(long int)2000L ) == 0 ) return;
+      //09.09.2021 was: (long int)2000L
+      if( f_timer(t_prep_MVD,(long int)4000L ) == 0 ) return;
       f_icp_errS(No_F_dat_err);
       State_SLV=End_DLV;
 
@@ -2872,7 +2877,10 @@ m00:
 
   if((fl_VI==0) || (fl_MI==0))
   {
-    if( f_timer(tm_mvd_p,t_mvd_cor*2)==0 )
+    //09.09.2021 YN was: if( f_timer(tm_mvd_p,t_mvd_cor*2)==0 )
+    //now:
+    if( f_timer(tm_mvd_p,(long int)10000L )==0 )
+
 //  if( f_timer(tm_mvd_p,(MVD[0].pool_time*24))==0 )
        return;
     else
@@ -2887,6 +2895,9 @@ m00:
 m1:
   if( Flag_Low == 0)
               Out_on(OUT4);
+
+  //09.09.2021 YN
+  fl_GO_t=0;
 
 //printf("\r\n f_MVD_cor() ");
 
@@ -3005,6 +3016,10 @@ f_reg_cmn(17);
      State_SLV=End_DLV;
 
       f_reg_cmn(17);
+
+    //09.09.2021 YN
+    fl_GO_t=0;
+
      return;
   }
      flag_nal=0;
@@ -3013,6 +3028,9 @@ f_reg_cmn(17);
      State_SLV=End_DLV;
       f_reg_cmn(17);
 
+      //09.09.2021 YN
+      fl_GO_t=0;
+
      offs_cor=(vol2-vol_f);
      if(flow_mom > 0) dsc_tmp=offs_cor/flow_mom;
      else dsc_tmp=0;
@@ -3020,6 +3038,10 @@ f_reg_cmn(17);
   if((fct_offs==0)&& (fct_offs_L==0))
      {
 m_end:
+
+          //09.09.2021 YN
+          fl_GO_t=0;
+
           return;
      }
 
