@@ -7287,7 +7287,7 @@ m_gp:
           ftmp_p[3]=(float)LIM_FLOW_PL /k_div ;
           ftmp_p[4]=(float)LIM_FLOW_ML /k_div ;
 
-          if(f_dis_set(ds_ldp,3,5)>0)
+          if(f_dis_set(ds_ldp,4,5)>0)
           {
            dF_perm = ftmp_p[0];
            maxF_errPL = ftmp_p[1];
