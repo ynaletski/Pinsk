@@ -711,6 +711,18 @@ m_err_mvd:
 
     if( MVD_t_rslt[0]>0)
     {
+
+       //18.11.2021 YN
+       #if defined(weightedAverageTemperature)
+         if(waTempOn)
+         {
+            waTemp = 0.0;
+            //30.03.2022 YN added =0.0;
+            mas_ch_cur_old=mas_ch_cur=0.0;
+            averageTemp = 0.0;
+         }
+       #endif       
+
        sw_dlv_liq=11;
 //     MmiGotoxy(0,1);  MmiPuts("Включение потока жидкости    ");
        MmiGotoxy(0,1);  MmiPuts(list_avt[10]);
@@ -1678,4 +1690,3 @@ void f_inp7188()
 }
 */
 //-------------------------------
-

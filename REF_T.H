@@ -10,5 +10,12 @@ void f_cnt_DnsA();
 extern double Dens_cmn;
 extern float Dens_cmn_f;
 
-
-
+//18.11.2021 YN
+#if defined(weightedAverageTemperature)
+extern int waTempOn;
+extern float waTemp;
+extern float mas_ch_cur_old;
+extern float mas_ch_cur;
+//30.03.2022 YN
+extern float averageTemp;
+#endif

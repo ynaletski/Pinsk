@@ -5,6 +5,16 @@
 #include <stdlib.h>
 #include <errno.h>
 
+//18.11.2021 YN
+#if defined(weightedAverageTemperature)
+int waTempOn = 0; // 1 - температура берется средневзвешенная; 0 - нет;
+float waTemp = 0.0;
+float mas_ch_cur_old = 0.0;
+float mas_ch_cur = 0.0;
+//30.03.2022 YN
+float averageTemp=0.0;
+#endif
+
 //#include "main.c"
 //---------------------------------
 /*
@@ -313,5 +323,3 @@ float Temp_obs;
 }
 
 /*----------------------------------------------------*/
-
-

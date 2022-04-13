@@ -539,7 +539,15 @@ struct eee_dat EE_Dat[]=
 &fict_ftmp,sizeof( fict_ftmp ),
 &fict_ftmp,sizeof( fict_ftmp ),
 &fict_ftmp,sizeof( fict_ftmp ),
-&fict_ftmp,sizeof( fict_ftmp ),
+
+
+//18.11.2021 YN
+#if defined(weightedAverageTemperature)
+  &waTempOn,sizeof( waTempOn ),
+  &fict_itmp,sizeof( fict_itmp ),
+#else
+  &fict_ftmp,sizeof( fict_ftmp ),
+#endif
 
 //20.08.2021 YN
 #if defined(UNDERPRESSURE)
@@ -928,5 +936,3 @@ unsigned long int Ee_summ;
    return 0;
 }
 //--------------------------------------
-
-

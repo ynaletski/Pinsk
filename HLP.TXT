@@ -94,10 +94,12 @@ p6. процент нового ном.расх. относит. старого 
  p5   1 - прокачка
       0 - отпуск
 
- MDT p1,p2;
+//18.11.2021 YN
+if defined(weightedAverageTemperature) - added p3
+ MDT p1,p2,p3;
    p1 - mode temp , 1 - use external termometer
    p2 - mode count D_Ref , 1 - average during delivery
-
+   p3 - 1 - берется средневзвешенная температура
 
  DNO p1 p2 p3 p4;
  p1 - максимальное время на нормализацию начальных условий, мс

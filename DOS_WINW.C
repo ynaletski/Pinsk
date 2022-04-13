@@ -428,7 +428,43 @@ void f_prn_proc()
               if( flag_AD != 0)
               {
                 MmiGotoxy(0,4);  MmiPuts(" Плотн.средняя | Темп.средняя ");
-                MmiGotoxy(0,5);  MmiPrintf("%7.2f кг/м3  | %7.2f C     ",Dens_a,Temp_a);
+
+                //18.11.2021 YN
+                //MmiGotoxy(0,5);  MmiPrintf("%7.2f кг/м3  | %7.2f C     ",Dens_a,Temp_a);
+                #if defined(weightedAverageTemperature)
+                  if( waTempOn ) 
+                  {
+                    if(s_MVD[0].MassT != 0)
+                    {
+                      //30.03.2022 YN
+                      averageTemp = waTemp/s_MVD[0].MassT;
+                      MmiGotoxy(0,5);  
+                      MmiPrintf("%7.2f кг/м3  | %7.2f C     ",Dens_a,averageTemp);
+                    }
+                    else
+                    {
+                      if ((mode_temp==EXT) && (s_MVD[0].TempR > -49.5) )
+                      {
+                        MmiGotoxy(0,5);  
+                        MmiPrintf("%7.2f кг/м3  | %7.2f C     ",Dens_a,s_MVD[0].TempR);
+                      }
+                      else
+                      {
+                        MmiGotoxy(0,5);  
+                        MmiPrintf("%7.2f кг/м3  | %7.2f C     ",Dens_a,s_MVD[0].Temp);
+                      }
+                    }
+                  }
+                  else
+                  {
+                    MmiGotoxy(0,5);  
+                    MmiPrintf("%7.2f кг/м3  | %7.2f C     ",Dens_a,Temp_a);
+                  }
+                #else
+                  MmiGotoxy(0,5);  
+                  MmiPrintf("%7.2f кг/м3  | %7.2f C     ",Dens_a,Temp_a);
+                #endif
+
               }
               else
 #endif
@@ -2434,20 +2470,45 @@ char *list1_dsr[]={
 "Процент замедл N1 ",      //171
 "Процент замедл N2 ",      //172
 "Процент замедл N3 ",      //173
+#else
+"",                        //166
+"",                        //167
+"",                        //168
+"",                        //169
+"",                        //170
+"",                        //171
+"",                        //172
+"",                        //173
 #endif
 
 //20.08.2021 YN
 #if defined(UNDERPRESSURE)
-"Разряж.  N анлг.вх",      //166    //174
-"Разряж. шкала, МПа",      //167    //175
-"Разряж. смеще. МПа",      //168    //176
-"Контроль разряж.  ",      //169    //177
-"Макс.допуст.разр. ",      //170    //178
-"Время ожидания up ",      //171    //179
-"Умен.ном.расх.N1% ",      //172    //180 
-"Умен.ном.расх.N2% ",      //173    //181
-"Умен.ном.расх.N3% ",      //174    //182
+"Разряж.  N анлг.вх",      //174
+"Разряж. шкала, МПа",      //175
+"Разряж. смеще. МПа",      //176
+"Контроль разряж.  ",      //177
+"Макс.допуст.разр. ",      //178
+"Время ожидания up ",      //179
+"Умен.ном.расх.N1% ",      //180 
+"Умен.ном.расх.N2% ",      //181
+"Умен.ном.расх.N3% ",      //182
+#else
+"",                        //174
+"",                        //175
+"",                        //176
+"",                        //177
+"",                        //178
+"",                        //179
+"",                        //180
+"",                        //181
+"",                        //182
+#endif
 
+//18.11.2021 YN
+#if defined(weightedAverageTemperature)
+"Средневзвеш.темп.",       //183
+#else
+"",                        //183
 #endif
 
 "",
@@ -5906,5 +5967,3 @@ int i;
   }
   flag_Slv_1=flag_Slv;
 }
-
-

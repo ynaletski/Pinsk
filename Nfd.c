@@ -873,24 +873,13 @@ struct dis_set_MMI ds_list1[]=
   T_FLOAT,
 
   //20.08.2021 YN
-  #if defined(DENSITY_CONTROL)
-    #if defined(UNDERPRESSURE)
-      list1_dsr,
-      175,
-      &ftmp_naMMI[2],
-      -BIG_P,
-      BIG_P,
-      T_FLOAT,
-    #endif
-  #else
-    #if defined(UNDERPRESSURE)
-      list1_dsr,
-      167,
-      &ftmp_naMMI[2],
-      -BIG_P,
-      BIG_P,
-      T_FLOAT,
-    #endif
+  #if defined(UNDERPRESSURE)
+    list1_dsr,
+    175,
+    &ftmp_naMMI[2],
+    -BIG_P,
+    BIG_P,
+    T_FLOAT,
   #endif
 
 //-----------
@@ -909,24 +898,13 @@ struct dis_set_MMI ds_list1[]=
   T_FLOAT,
 
   //20.08.2021 YN
-  #if defined(DENSITY_CONTROL)
-    #if defined(UNDERPRESSURE)
-      list1_dsr,
-      176,
-      &analog_offset[2],
-      -BIG_P,
-      BIG_P,
-      T_FLOAT,
-    #endif
-  #else
-    #if defined(UNDERPRESSURE)
-      list1_dsr,
-      168,
-      &analog_offset[2],
-      -BIG_P,
-      BIG_P,
-      T_FLOAT,
-    #endif
+  #if defined(UNDERPRESSURE)
+    list1_dsr,
+    176,
+    &analog_offset[2],
+    -BIG_P,
+    BIG_P,
+    T_FLOAT,
   #endif
 
 /*----------------*/
@@ -1104,25 +1082,15 @@ struct dis_set_MMI ds_list1[]=
   T_INT,
 
   //20.08.2021 YN
-  #if defined(DENSITY_CONTROL)
-    #if defined(UNDERPRESSURE)
-      list1_dsr,
-      174,               // Разряж. N анлг.вх
-      &analog_num[2],
-      0,
-      8,
-      T_INT,
-    #endif
-  #else
-    #if defined(UNDERPRESSURE)
-      list1_dsr,
-      166,               // Разряж. N анлг.вх
-      &analog_num[2],
-      0,
-      8,
-      T_INT,
-    #endif
+  #if defined(UNDERPRESSURE)
+    list1_dsr,
+    174,               // Разряж. N анлг.вх
+    &analog_num[2],
+    0,
+    8,
+    T_INT,
   #endif
+
 
 //-----------
   list1_dsr,
@@ -1533,98 +1501,64 @@ struct dis_set_MMI ds_list1[]=
     0.0,
     100.0,
     T_FLOAT,
+  #endif
 
-    //20.08.2021 YN
-    #if defined(UNDERPRESSURE)
-      //-----------
-      list1_dsr,  //Underpressure Control permission
-      177,
-      &UpCP,
-      0,
-      1,
-      T_INT,
-      //-----------
-      list1_dsr,
-      178,
-      &UnPressLim,
-      -0.1,
-      500.0,
-      T_FLOAT,
-      //-----------
-      list1_dsr,
-      179,
-      &nrmlz_time_up,
-      0,
-      BIG_P,
-      T_INT_L,
-      //-----------
-      list1_dsr,
-      180,
-      &procent_up[FIRST],
-      0.0,
-      100.0,
-      T_FLOAT,
-      //-----------
-      list1_dsr,
-      181,
-      &procent_up[SECOND],
-      0.0,
-      100.0,
-      T_FLOAT,
-      //-----------
-      list1_dsr,
-      182,
-      &procent_up[THIRD],
-      0.0,
-      100.0,
-      T_FLOAT,
-    #endif
-  #else
-    //20.08.2021 YN
-    #if defined(UNDERPRESSURE)
-      //-----------
-      list1_dsr,
-      169,
-      &UpCP,
-      0,
-      1,
-      T_INT,
-      //-----------
-      list1_dsr,
-      170,
-      &UnPressLim,
-      -0.1,
-      500.0,
-      T_FLOAT,
-      //-----------
-      list1_dsr,
-      171,
-      &nrmlz_time_up,
-      0,
-      BIG_P,
-      T_INT_L,
-      //-----------
-      list1_dsr,
-      172,
-      &procent_up[FIRST],
-      0.0,
-      100.0,
-      T_FLOAT,
-      //-----------
-      list1_dsr,
-      173,
-      &procent_up[SECOND],
-      0.0,
-      100.0,
-      T_FLOAT,
-      //-----------
-      list1_dsr,
-      174,
-      &procent_up[THIRD],
-      0.0,
-      100.0,
-      T_FLOAT,
-    #endif
+  //20.08.2021 YN
+  #if defined(UNDERPRESSURE)
+    //-----------
+    list1_dsr,  //Underpressure Control permission
+    177,
+    &UpCP,
+    0,
+    1,
+    T_INT,
+    //-----------
+    list1_dsr,
+    178,
+    &UnPressLim,
+    -0.1,
+    500.0,
+    T_FLOAT,
+    //-----------
+    list1_dsr,
+    179,
+    &nrmlz_time_up,
+    0,
+    BIG_P,
+    T_INT_L,
+    //-----------
+    list1_dsr,
+    180,
+    &procent_up[FIRST],
+    0.0,
+    100.0,
+    T_FLOAT,
+    //-----------
+    list1_dsr,
+    181,
+    &procent_up[SECOND],
+    0.0,
+    100.0,
+    T_FLOAT,
+    //-----------
+    list1_dsr,
+    182,
+    &procent_up[THIRD],
+    0.0,
+    100.0,
+    T_FLOAT,
+  #endif
+
+  //18.11.2021 YN
+  #if defined(weightedAverageTemperature)
+  //----------------
+    list1_dsr,        // "Средневзвеш.темп."
+    183,
+    &waTempOn,
+    0,
+    1,
+    T_INT,
+  //-----------
   #endif
 
 //-----------
@@ -2336,6 +2270,23 @@ union  { float f; char c[4]; } o;
 
   GetTimeDate(&t);
 
+  //18.11.2021 YN
+  #if defined(weightedAverageTemperature)
+    if(waTempOn)
+    {
+
+      if ((mode_temp==EXT) && (s_MVD[0].TempR > -49.5) )
+      {
+        waTemp = waTemp + (s_MVD[0].TempR * ((float)(mas_ch_cur - mas_ch_cur_old)));
+      }
+      else
+      {
+        waTemp = waTemp + (s_MVD[0].Temp * ((float)(mas_ch_cur - mas_ch_cur_old)));
+      }
+      //waTemp = waTemp + (s_MVD[0].Temp * ((float)(mas_ch_cur - mas_ch_cur_old)));
+      mas_ch_cur_old=mas_ch_cur;
+    }
+  #endif
 
   if(FlagWinSum)
    {
@@ -2696,4 +2647,3 @@ int OUT1cc=0;
 
 }
 /*-----------------------------------------*/
-
